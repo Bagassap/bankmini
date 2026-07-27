@@ -1,4 +1,4 @@
-import { JenisNasabah } from '@prisma/client';
+import { JenisNasabah } from '../../generated/prisma/client';
 import {
   IsDateString,
   IsIn,

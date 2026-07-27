@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { JenisNasabah, Nasabah, Prisma, StatusNasabah } from '@prisma/client';
+import { JenisNasabah, Nasabah, Prisma, StatusNasabah } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface CreateNasabahInput {
@@ -232,7 +232,7 @@ export class NasabahService {
 
   async updateSaldo(
     id: string,
-    saldo: Prisma.Decimal.Value,
+    saldo: Prisma.Decimal | number | string,
     tx: PrismaClientOrTx = this.prisma,
   ): Promise<Nasabah> {
     try {

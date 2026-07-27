@@ -5,12 +5,12 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { JenisTransaksi, Prisma, Transaksi } from '@prisma/client';
+import { JenisTransaksi, Prisma, Transaksi } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface SetorTarikInput {
   nasabahId: string;
-  jumlah: Prisma.Decimal.Value;
+  jumlah: Prisma.Decimal | number | string;
   processedById: string;
   keterangan?: string;
 }

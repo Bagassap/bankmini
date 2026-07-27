@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { Prisma, Role, User } from '@prisma/client';
+import { Prisma, Role, User } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface CreateUserInput {

@@ -9,7 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { JenisNasabah, StatusNasabah } from '@prisma/client';
+import { JenisNasabah, StatusNasabah } from '../generated/prisma/client';
 import { NasabahService, SafeNasabah } from './nasabah.service';
 import { CreateNasabahDto } from './dto/create-nasabah.dto';
 import { UpdateNasabahDto } from './dto/update-nasabah.dto';

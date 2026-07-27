@@ -8,7 +8,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { JenisTransaksi, Role } from '@prisma/client';
+import { JenisTransaksi, Role } from '../generated/prisma/client';
 import { TransaksiService } from './transaksi.service';
 import { SetorTarikDto } from './dto/setor-tarik.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
