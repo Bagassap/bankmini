@@ -1,0 +1,99 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  superadmin
+  admin
+  teller
+}
+
+enum JenisNasabah {
+  siswa
+  guru
+  umum
+}
+
+enum JenisKelamin {
+  L
+  P
+}
+
+enum StatusNasabah {
+  aktif
+  nonaktif
+}
+
+enum JenisTransaksi {
+  setor
+  tarik
+}
+
+model User {
+  id        String    @id @default(uuid())
+  username  String    @unique
+  password  String
+  nama      String
+  role      Role      @default(teller)
+  isActive  Boolean   @default(true)
+  lastLogin DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  transaksiProcessed Transaksi[] @relation("ProcessedBy")
+
+  @@map("users")
+}
+
+model Nasabah {
+  id           String        @id @default(uuid())
+  noRekening   String        @unique
+  nama         String
+  jenisNasabah JenisNasabah
+  nis          String?
+  kelas        String?
+  jurusan      String?
+  nip          String?
+  jabatan      String?
+  alamat       String?
+  noTelepon    String?
+  jenisKelamin JenisKelamin?
+  tanggalLahir DateTime?
+  saldo        Decimal       @default(0) @db.Decimal(15, 2)
+  status       StatusNasabah @default(aktif)
+  username     String?       @unique
+  password     String?
+  isActive     Boolean       @default(true)
+  lastLogin    DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  transaksi Transaksi[]
+
+  @@map("nasabah")
+}
+
+model Transaksi {
+  id             String         @id @default(uuid())
+  noTransaksi    String         @unique
+  nasabahId      String
+  nasabah        Nasabah        @relation(fields: [nasabahId], references: [id])
+  jenisTransaksi JenisTransaksi
+  jumlah         Decimal        @db.Decimal(15, 2)
+  saldoSebelum   Decimal        @db.Decimal(15, 2)
+  saldoSesudah   Decimal        @db.Decimal(15, 2)
+  keterangan     String?
+  processedById  String
+  processedBy    User           @relation("ProcessedBy", fields: [processedById], references: [id])
+  createdAt      DateTime       @default(now())
+
+  @@map("transaksi")
+}
