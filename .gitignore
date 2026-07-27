@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# standalone design-reference template, not part of this app
+/nextjs-admin-dashboard-main
