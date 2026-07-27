@@ -15,7 +15,6 @@ function buildNoRekening(sequence: number): string {
 }
 
 async function main() {
-  // Akun staf (login pakai username)
   const superadminPassword = await bcrypt.hash('superadmin123', 10);
   const adminPassword = await bcrypt.hash('admin123', 10);
   const tellerPassword = await bcrypt.hash('teller123', 10);
@@ -53,10 +52,8 @@ async function main() {
     },
   });
 
-  // Nasabah contoh (login pakai NIS/NIP; nasabah umum pakai no rekening)
-  // Password awal = no rekening, disarankan diganti setelah login pertama.
   const noRekeningSiswa = buildNoRekening(1);
-  const usernameSiswa = '2025001'; // NIS
+  const usernameSiswa = '2025001';
   await prisma.nasabah.upsert({
     where: { noRekening: noRekeningSiswa },
     update: { username: usernameSiswa },
@@ -77,7 +74,7 @@ async function main() {
   });
 
   const noRekeningGuru = buildNoRekening(2);
-  const usernameGuru = '198501012010012001'; // NIP
+  const usernameGuru = '198501012010012001';
   await prisma.nasabah.upsert({
     where: { noRekening: noRekeningGuru },
     update: { username: usernameGuru },
@@ -96,7 +93,6 @@ async function main() {
     },
   });
 
-  // Nasabah umum tidak diberi akun login — hanya bisa dilihat lewat teller.
   const noRekeningUmum = buildNoRekening(3);
   await prisma.nasabah.upsert({
     where: { noRekening: noRekeningUmum },

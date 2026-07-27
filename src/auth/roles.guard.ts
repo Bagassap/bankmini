@@ -23,9 +23,6 @@ export class RolesGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user = request.user as JwtPayload | undefined;
 
-    // `role` pada token nasabah sebenarnya berisi jenisNasabah (siswa/guru/umum),
-    // bukan Role enum staff — RolesGuard hanya pernah dipasang di endpoint staff,
-    // jadi accountType harus 'staff' supaya perbandingan role di bawah ini valid.
     if (user?.accountType !== 'staff' || !requiredRoles.includes(user.role as Role)) {
       throw new ForbiddenException(
         `Role ${user?.role ?? 'tidak dikenal'} tidak memiliki akses ke resource ini`,

@@ -23,8 +23,6 @@ import type { JwtPayload } from '../auth/jwt.strategy';
 export class TransaksiController {
   constructor(private readonly transaksiService: TransaksiService) {}
 
-  // Setor/tarik tunai adalah tugas teller — Admin/Superadmin hanya boleh
-  // memantau (endpoint GET di bawah), bukan memproses transaksi kas.
   @Post('setor')
   @UseGuards(StaffOnlyGuard, RolesGuard)
   @Roles(Role.teller)

@@ -65,8 +65,6 @@ export class AuthService {
         input.username,
       );
       if (nasabah) {
-        // Nasabah umum tidak punya akun login (username/password null) —
-        // mereka hanya bisa melihat data dengan datang langsung ke teller.
         if (!nasabah.isActive || !nasabah.username || !nasabah.password) {
           throw new UnauthorizedException('Username atau password salah');
         }

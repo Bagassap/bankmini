@@ -57,10 +57,6 @@ export class NasabahService {
     return safeNasabah;
   }
 
-  /**
-   * Nasabah umum tidak diberi akun login — mereka hanya bisa melihat
-   * data rekening dengan datang langsung ke teller.
-   */
   private buildUsername(
     input: Pick<CreateNasabahInput, 'jenisNasabah' | 'nis' | 'nip'>,
     noRekening: string,
@@ -163,7 +159,6 @@ export class NasabahService {
 
   async create(input: CreateNasabahInput): Promise<SafeNasabah> {
     try {
-      // retry sekali jika terjadi tabrakan no rekening akibat race condition
       for (let attempt = 0; attempt < 3; attempt++) {
         const noRekening = await this.generateNoRekening();
         const username = this.buildUsername(input, noRekening);
@@ -218,7 +213,6 @@ export class NasabahService {
   async update(id: string, input: UpdateNasabahInput): Promise<SafeNasabah> {
     try {
       await this.findById(id);
-      // saldo, noRekening, dan username tidak boleh diubah lewat method ini
       const nasabah = await this.prisma.nasabah.update({
         where: { id },
         data: input,
