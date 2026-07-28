@@ -567,29 +567,67 @@ export function NasabahPageContent() {
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="mb-5 flex flex-col justify-between gap-4 md:mb-7 md:flex-row md:items-end 2xl:mb-8"
+        className="relative mb-5 overflow-hidden rounded-3xl bg-background-card p-5 shadow-soft sm:p-6 md:mb-7 2xl:mb-8"
       >
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <Users size={20} />
-          </span>
-          <div>
-            <h1 className="text-2xl font-bold text-text-primary">Nasabah</h1>
-            <p className="text-sm text-text-secondary">
-              Kelola data &amp; saldo seluruh nasabah bank mini
-            </p>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.03] bg-[radial-gradient(circle,rgba(17,32,240,0.9)_1px,transparent_1px)] bg-size-[16px_16px]"
+        />
+        <div className="pointer-events-none absolute -top-14 -right-14 h-44 w-44 rounded-full bg-primary/10 blur-3xl" />
+
+        <div className="relative flex flex-col justify-between gap-4 md:flex-row md:items-center">
+          <div className="flex items-center gap-4">
+            <motion.span
+              initial={{ scale: 0.6, opacity: 0, rotate: -15 }}
+              animate={{ scale: 1, opacity: 1, rotate: 0 }}
+              whileHover={{ scale: 1.08, rotate: 6 }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-primary to-primary-dark text-white shadow-sm"
+            >
+              <Users size={24} />
+              <motion.span
+                animate={{ opacity: [1, 0.4, 1] }}
+                transition={{ duration: 1.6, repeat: Infinity }}
+                className="absolute -right-0.5 -bottom-0.5 h-3.5 w-3.5 rounded-full bg-success ring-2 ring-background-card"
+              />
+            </motion.span>
+            <div>
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+                <Sparkles size={12} />
+                Manajemen Nasabah
+              </p>
+              <h1 className="text-2xl font-bold text-text-primary">Nasabah</h1>
+              <p className="mt-1 flex items-center gap-1.5 text-sm text-text-secondary">
+                <ShieldCheck size={13} className="text-text-muted" />
+                Kelola data &amp; saldo seluruh nasabah bank mini
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="flex items-center gap-2.5 rounded-full bg-primary/10 py-1.5 pr-3.5 pl-1.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                <Users size={16} />
+              </span>
+              <span className="text-left leading-tight">
+                <span className="block text-xs font-bold text-primary">
+                  {nasabahList.length} Nasabah
+                </span>
+                <span className="block text-[10px] text-primary/70">Terdaftar</span>
+              </span>
+            </span>
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={openAdd}
+              className="flex w-fit items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary-dark"
+            >
+              <UserPlus size={16} />
+              Tambah Nasabah
+            </motion.button>
           </div>
         </div>
-        <motion.button
-          type="button"
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={openAdd}
-          className="flex w-fit items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary-dark"
-        >
-          <UserPlus size={16} />
-          Tambah Nasabah
-        </motion.button>
       </motion.div>
 
       <div className="mb-5 flex gap-6 border-b border-border">

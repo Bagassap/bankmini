@@ -6,10 +6,8 @@ import toast from "react-hot-toast";
 import { AlertTriangle, Banknote, ClipboardList, Wallet } from "lucide-react";
 import Layout from "@/components/Layout";
 import { InformasiRekeningCard } from "@/components/transaksi/InformasiRekeningCard";
-import { TransaksiHeader } from "@/components/transaksi/TransaksiHeader";
 import { TransaksiRightPanel } from "@/components/transaksi/TransaksiRightPanel";
 import { TransaksiSuccessPanel } from "@/components/transaksi/TransaksiSuccessPanel";
-import { useLiveClock } from "@/hooks/useLiveClock";
 import { useNasabahLookup } from "@/hooks/useNasabahLookup";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
@@ -24,7 +22,6 @@ const inputClass =
 
 export default function TarikTunaiPage() {
   const user = useAuthStore((state) => state.user);
-  const now = useLiveClock();
   const {
     noRekening,
     setNoRekening,
@@ -76,8 +73,6 @@ export default function TarikTunaiPage() {
 
   return (
     <Layout>
-      <TransaksiHeader meta={TARIK_META} now={now} />
-
       <div className="grid grid-cols-1 gap-4 md:gap-6 2xl:gap-7.5 lg:grid-cols-[1fr_340px]">
         <div className="space-y-4 md:space-y-6">
           <InformasiRekeningCard

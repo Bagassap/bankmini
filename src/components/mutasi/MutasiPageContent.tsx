@@ -18,11 +18,9 @@ import {
   Loader2,
   Printer,
   Search,
-  ShieldCheck,
   Tag,
   Wallet,
   X,
-  Zap,
 } from "lucide-react";
 import Layout from "@/components/Layout";
 import api from "@/lib/api";
@@ -267,59 +265,6 @@ export function MutasiPageContent() {
 
   return (
     <Layout>
-      <motion.div
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="mb-5 flex flex-col justify-between gap-4 md:mb-7 md:flex-row md:items-end 2xl:mb-8"
-      >
-        <div>
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary">
-              <motion.span
-                animate={{ opacity: [1, 0.3, 1] }}
-                transition={{ duration: 1.6, repeat: Infinity }}
-                className="h-1.5 w-1.5 rounded-full bg-primary"
-              />
-              <Zap size={11} />
-              Live Data
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-[11px] font-bold text-success">
-              <ShieldCheck size={11} />
-              Data Terverifikasi
-            </span>
-          </div>
-          <h1 className="text-2xl font-bold text-text-primary">Mutasi Rekening</h1>
-          <p className="text-sm text-text-secondary">
-            Pantau arus kas masuk dan keluar nasabah dalam satu tampilan.
-          </p>
-        </div>
-
-        {nasabah && (
-          <div className="flex flex-wrap items-center gap-2">
-            <motion.button
-              type="button"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={exportCsv}
-              className="flex items-center gap-1.5 rounded-xl bg-background-card px-4 py-2.5 text-sm font-bold text-text-secondary shadow-soft transition-colors hover:text-primary"
-            >
-              <Download size={14} />
-              Export CSV
-            </motion.button>
-            <motion.button
-              type="button"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => window.print()}
-              className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary-dark"
-            >
-              <Printer size={14} />
-              Cetak
-            </motion.button>
-          </div>
-        )}
-      </motion.div>
 
       <motion.div
         initial="hidden"
@@ -390,16 +335,43 @@ export function MutasiPageContent() {
             className="pointer-events-none absolute inset-0 opacity-[0.03] bg-[radial-gradient(circle,rgba(17,32,240,0.9)_1px,transparent_1px)] bg-size-[16px_16px]"
           />
 
-          <div className="relative mb-5 flex items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <ClipboardList size={18} />
-            </span>
-            <div>
-              <p className="text-sm font-bold text-text-primary">Ringkasan Mutasi</p>
-              <p className="text-xs text-text-secondary">
-                Cari nasabah &amp; pantau arus kas dalam satu tempat
-              </p>
+          <div className="relative mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <ClipboardList size={18} />
+              </span>
+              <div>
+                <p className="text-sm font-bold text-text-primary">Ringkasan Mutasi</p>
+                <p className="text-xs text-text-secondary">
+                  Cari nasabah &amp; pantau arus kas dalam satu tempat
+                </p>
+              </div>
             </div>
+
+            {nasabah && (
+              <div className="flex flex-wrap items-center gap-2">
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={exportCsv}
+                  className="flex items-center gap-1.5 rounded-xl bg-background-hover px-3.5 py-2 text-xs font-bold text-text-secondary transition-colors hover:text-primary"
+                >
+                  <Download size={13} />
+                  Export CSV
+                </motion.button>
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => window.print()}
+                  className="flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-primary-dark"
+                >
+                  <Printer size={13} />
+                  Cetak
+                </motion.button>
+              </div>
+            )}
           </div>
 
           <form

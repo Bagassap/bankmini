@@ -9,7 +9,6 @@ import {
   ArrowUpFromLine,
   BarChart3,
   BookUser,
-  Calendar,
   CalendarCheck2,
   CalendarDays,
   CalendarRange,
@@ -19,7 +18,6 @@ import {
   Landmark,
   Loader2,
   PieChart as PieChartIcon,
-  Sparkles,
   Trophy,
   TrendingDown,
   TrendingUp,
@@ -402,34 +400,6 @@ export function LaporanPageContent() {
 
   return (
     <Layout>
-      <motion.div
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="mb-5 flex flex-col justify-between gap-3 md:mb-7 md:flex-row md:items-end 2xl:mb-8"
-      >
-        <div>
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary">
-              <Sparkles size={11} />
-              Data Contoh
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-background-hover px-2.5 py-1 text-[11px] font-bold text-text-secondary">
-              <Calendar size={11} />
-              {today}
-            </span>
-          </div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-text-primary">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-primary to-primary-dark text-white shadow-sm">
-              <BarChart3 size={17} />
-            </span>
-            Laporan Transaksi
-          </h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            Ringkasan performa transaksi &amp; nasabah Bank Mini secara keseluruhan.
-          </p>
-        </div>
-      </motion.div>
 
       <motion.div
         initial="hidden"
