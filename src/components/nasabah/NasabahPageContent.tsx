@@ -346,7 +346,6 @@ export function NasabahPageContent() {
       setAddForm(initialAddForm);
       setShowAddModal(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -355,7 +354,6 @@ export function NasabahPageContent() {
       setSelected(new Set());
     }, 300);
     return () => clearTimeout(timeout);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, jenisFilter, search]);
 
   const displayList = useMemo(() => {
@@ -565,7 +563,6 @@ export function NasabahPageContent() {
 
   return (
     <Layout>
-      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -595,7 +592,6 @@ export function NasabahPageContent() {
         </motion.button>
       </motion.div>
 
-      {/* Tabs */}
       <div className="mb-5 flex gap-6 border-b border-border">
         {(
           [
@@ -625,7 +621,6 @@ export function NasabahPageContent() {
         ))}
       </div>
 
-      {/* Filter & toolbar */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -637,7 +632,6 @@ export function NasabahPageContent() {
           className="pointer-events-none absolute inset-0 opacity-[0.025] bg-[radial-gradient(circle,rgba(17,32,240,0.9)_1px,transparent_1px)] bg-size-[16px_16px]"
         />
 
-        {/* Toolbar */}
         <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="flex items-center gap-1.5 text-sm font-bold text-text-primary">
@@ -704,7 +698,6 @@ export function NasabahPageContent() {
           </div>
         </div>
 
-        {/* Sub-filters */}
         <div className="relative mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
           <div className="flex flex-wrap items-center gap-1.5">
             {activeTab === "sekolah" &&
@@ -811,7 +804,6 @@ export function NasabahPageContent() {
           </div>
         </div>
 
-        {/* Distribusi status — mengisi ruang & menunjukkan komposisi hasil saat ini */}
         <div className="relative mt-4 flex items-center gap-3 rounded-2xl bg-background-hover/60 p-3">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Users size={14} />
@@ -859,7 +851,6 @@ export function NasabahPageContent() {
           </div>
         </div>
 
-        {/* Active filter chips */}
         {(jenisFilter || statusFilter) && (
           <div className="relative mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
             <span className="flex items-center gap-1 text-[11px] font-semibold text-text-muted">
@@ -899,7 +890,6 @@ export function NasabahPageContent() {
         )}
       </motion.div>
 
-      {/* Summary bar */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -1059,7 +1049,6 @@ export function NasabahPageContent() {
         </div>
       </motion.div>
 
-      {/* Bulk action bar */}
       <AnimatePresence>
         {selected.size > 0 && (
           <motion.div
@@ -1092,7 +1081,6 @@ export function NasabahPageContent() {
         )}
       </AnimatePresence>
 
-      {/* Table */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -1536,7 +1524,6 @@ export function NasabahPageContent() {
         )}
       </AnimatePresence>
 
-      {/* View modal */}
       <AnimatePresence>
         {viewing && (
           <motion.div
@@ -1763,7 +1750,6 @@ export function NasabahPageContent() {
         )}
       </AnimatePresence>
 
-      {/* Add modal */}
       <AnimatePresence>
         {showAddModal && (
           <motion.div

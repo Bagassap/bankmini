@@ -58,8 +58,6 @@ const TELLER_MENU_GROUPS: MenuGroup[] = [
   },
 ];
 
-// Admin tidak memproses setor/tarik — Transaksi di sini adalah mode
-// pemantauan/oversight (read-only), bukan form transaksi seperti Teller.
 const ADMIN_MENU_GROUPS: MenuGroup[] = [
   {
     label: "Menu Utama",
@@ -148,15 +146,11 @@ export default function Sidebar({
             collapsed ? "px-2 py-3" : "p-3"
           }`}
         >
-          {/* decorative texture + glows */}
           <div className="pointer-events-none absolute inset-0 opacity-[0.07] bg-[radial-gradient(circle,rgba(255,255,255,0.9)_1px,transparent_1px)] bg-size-[16px_16px]" />
           <div className="animate-glow-pulse pointer-events-none absolute -top-12 -right-14 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
 
-          {/* Satu sistem spacing (gap) yang konsisten untuk seluruh isi sidebar —
-              tidak ada lagi margin/padding individual berbeda-beda per elemen. */}
           <div className="relative z-10 flex h-full flex-col gap-4">
-            {/* Header: logo + collapse toggle */}
             <div
               className={`flex ${
                 collapsed
@@ -205,8 +199,6 @@ export default function Sidebar({
               </motion.button>
             </div>
 
-            {/* Search — dilepas dari DOM saat collapsed (bukan cuma disembunyikan)
-                supaya tidak menyisakan slot gap kosong di antara elemen lain. */}
             {!collapsed && (
               <div className="flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2.5 backdrop-blur-sm transition-colors focus-within:border-white/30 focus-within:bg-white/15">
                 <Search className="h-4 w-4 shrink-0 text-white/70" strokeWidth={2.25} />
@@ -218,8 +210,6 @@ export default function Sidebar({
               </div>
             )}
 
-            {/* Menu groups — SATU nilai gap (gap-2) untuk label grup, divider,
-                dan setiap item menu, tidak ada margin/padding tambahan lagi. */}
             <nav className="flex flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden">
               {menuGroups.map((group, i) => (
                 <Fragment key={group.label}>
@@ -281,7 +271,6 @@ export default function Sidebar({
               ))}
             </nav>
 
-            {/* Footer */}
             <div className="border-t border-white/10 pt-3">
               <div
                 className={`flex items-center rounded-xl transition-colors hover:bg-white/10 ${

@@ -28,7 +28,6 @@ export function AnimatedCurrency({
       },
     });
     return controls.stop;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   return (

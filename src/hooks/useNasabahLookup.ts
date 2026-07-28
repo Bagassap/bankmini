@@ -6,7 +6,6 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
 import type { Nasabah } from "@/lib/types";
 
-/** Pencarian nasabah lewat no rekening — dipakai bareng oleh halaman Setor & Tarik. */
 export function useNasabahLookup() {
   const [noRekening, setNoRekening] = useState("");
   const [nasabah, setNasabah] = useState<Nasabah | null>(null);

@@ -169,7 +169,6 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
         <Menu size={18} />
       </button>
 
-      {/* Pencarian */}
       <div className="relative max-w-xs flex-1">
         <form
           onSubmit={handleSearch}
@@ -222,7 +221,6 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
         </AnimatePresence>
       </div>
 
-      {/* Hari & Jam */}
       <div className="relative hidden sm:block">
         <button
           type="button"
@@ -287,7 +285,6 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
       </div>
 
       <div className="ml-auto flex items-center gap-3">
-        {/* Notifikasi */}
         <div className="relative">
           <button
             type="button"
@@ -346,7 +343,6 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
           </AnimatePresence>
         </div>
 
-        {/* Profil */}
         <div className="relative">
           <button
             type="button"

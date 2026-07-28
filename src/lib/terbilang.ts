@@ -50,7 +50,6 @@ function terbilangBase(n: number): string {
   return `${terbilangBase(Math.floor(n / 1_000_000_000_000))} triliun${sisa ? ` ${terbilangBase(sisa)}` : ""}`;
 }
 
-/** Ubah nominal rupiah menjadi teks terbilang, mis. 15000 -> "Lima belas ribu rupiah". */
 export function terbilangRupiah(value: number): string {
   if (!Number.isFinite(value) || value <= 0) return "";
   const words = terbilangBase(Math.round(value)).replace(/\s+/g, " ").trim();

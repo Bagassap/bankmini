@@ -104,14 +104,12 @@ export function BalanceCard({
       transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
       className="relative overflow-hidden grid grid-cols-1 gap-6 rounded-3xl bg-background-card p-6 shadow-soft lg:grid-cols-[1.3fr_0.85fr_0.9fr] lg:items-center lg:gap-8 lg:p-8"
     >
-      {/* decorative texture + glow */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-[0.03] bg-[radial-gradient(circle,rgba(17,32,240,0.9)_1px,transparent_1px)] bg-size-[18px_18px]"
       />
       <div className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-primary/5 blur-3xl" />
 
-      {/* Left: balance + mini stats + actions */}
       <div className="relative">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -267,7 +265,6 @@ export function BalanceCard({
         </div>
       </div>
 
-      {/* Middle: Setor vs Tarik donut */}
       <div className="relative flex flex-col items-center justify-center gap-3 lg:border-x lg:border-border lg:px-4">
         <motion.div
           className="relative h-36 w-36"
@@ -343,7 +340,6 @@ export function BalanceCard({
         </p>
       </div>
 
-      {/* Right: nasabah category breakdown */}
       <div className="relative space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-xs font-bold tracking-widest text-text-muted uppercase">
@@ -354,7 +350,6 @@ export function BalanceCard({
           </span>
         </div>
 
-        {/* Bar proporsi gabungan seluruh kategori */}
         <div className="flex h-2 w-full overflow-hidden rounded-full bg-background-hover">
           {perJenis.map((item, i) => {
             const percent =

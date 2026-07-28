@@ -43,12 +43,6 @@ import Layout from "@/components/Layout";
 import { downloadExcel } from "@/lib/exportExcel";
 import { formatCurrency } from "@/lib/format";
 
-/* ---------------------------------------------------------------------- */
-/* Data contoh (dummy) — halaman ini demonstrasi tampilan laporan, belum   */
-/* terhubung ke API laporan sungguhan (backend belum menyediakan endpoint  */
-/* agregasi bulanan). Semua angka di bawah ini ilustratif.                 */
-/* ---------------------------------------------------------------------- */
-
 interface Stat {
   label: string;
   value: string;
@@ -117,7 +111,6 @@ const barData12 = [
   ...barData6,
 ];
 
-/* Data harian & mingguan — dipakai untuk isi file unduhan Excel per periode. */
 const dailyData: { label: string; setor: number; tarik: number }[] = [
   { label: "Senin", setor: 5.2, tarik: 2.8 },
   { label: "Selasa", setor: 6.8, tarik: 3.1 },
@@ -158,7 +151,6 @@ const topNasabah = [
   { name: "Budi Santoso", jenis: "Umum", total: 11, color: "#10b981" },
 ];
 
-/** Dipakai untuk menyusun tabel "Detail Transaksi" per nasabah di file Excel. */
 const NASABAH_POOL = [
   { nama: "Siswa Contoh", noRekening: "BM2607230001" },
   { nama: "Guru Contoh", noRekening: "BM2607230002" },
@@ -193,10 +185,6 @@ function buildTransaksiRows(rows: { label: string; setor: number; tarik: number 
     ];
   });
 }
-
-/* ---------------------------------------------------------------------- */
-/* Reusable pieces                                                        */
-/* ---------------------------------------------------------------------- */
 
 const cardVariants = {
   hidden: { opacity: 0, y: 16 },
@@ -321,8 +309,6 @@ function PieTooltip({
   );
 }
 
-/* ---------------------------------------------------------------------- */
-
 const DOWNLOAD_OPTIONS = [
   {
     key: "harian" as const,
@@ -445,7 +431,6 @@ export function LaporanPageContent() {
         </div>
       </motion.div>
 
-      {/* Stat grid */}
       <motion.div
         initial="hidden"
         animate="visible"
@@ -457,7 +442,6 @@ export function LaporanPageContent() {
         ))}
       </motion.div>
 
-      {/* Perbandingan Periode + Unduh Laporan */}
       <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3 md:mb-6 2xl:mb-7.5">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
@@ -555,7 +539,6 @@ export function LaporanPageContent() {
         </div>
       </motion.div>
 
-      {/* Unduh Laporan Excel */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -621,7 +604,6 @@ export function LaporanPageContent() {
         variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.1, delayChildren: 0.1 } } }}
         className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-3 2xl:gap-7.5"
       >
-        {/* Tren Transaksi — spans 2 columns */}
         <div className="lg:col-span-2">
           <ChartCard
             title="Tren Transaksi Bulanan"
@@ -674,7 +656,6 @@ export function LaporanPageContent() {
           </ChartCard>
         </div>
 
-        {/* Komposisi Transaksi */}
         <div>
           <ChartCard
             title="Komposisi Transaksi"
@@ -747,7 +728,6 @@ export function LaporanPageContent() {
           </ChartCard>
         </div>
 
-        {/* Nasabah Teraktif — spans 2 columns */}
         <div className="lg:col-span-2">
           <ChartCard
             title="Nasabah Teraktif"
@@ -792,7 +772,6 @@ export function LaporanPageContent() {
           </ChartCard>
         </div>
 
-        {/* Ringkasan Cepat */}
         <div>
           <motion.div
             variants={cardVariants}

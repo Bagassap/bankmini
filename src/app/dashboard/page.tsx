@@ -30,8 +30,6 @@ import { formatCurrency } from "@/lib/format";
 import { useAuthStore } from "@/store/authStore";
 import type { NasabahStats, Transaksi, TransaksiStats } from "@/lib/types";
 
-// TODO: belum ada API "kas utama" (ledger kas fisik terpisah dari mutasi rekening
-// nasabah) — nilai di bawah ini dummy sampai endpoint-nya tersedia.
 const KAS_UTAMA_DUMMY = 250_000_000;
 
 const statsContainerVariants = {
@@ -99,8 +97,6 @@ export default function DashboardPage() {
 
   const totalSetoranHariIni = Number(transaksiStats?.setor.totalNominal ?? 0);
   const totalPenarikanHariIni = Number(transaksiStats?.tarik.totalNominal ?? 0);
-  // "Saldo kas saat ini" disederhanakan sebagai net setoran - penarikan hari ini,
-  // karena belum ada endpoint saldo kas fisik/ledger tersendiri.
   const kasSaatIni = totalSetoranHariIni - totalPenarikanHariIni;
   const totalTransaksiHariIni = transaksiStats?.totalTransaksi ?? 0;
   const setorCount = transaksiStats?.setor.jumlahTransaksi ?? 0;

@@ -15,9 +15,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const hydrate = useAuthStore((state) => state.hydrate);
   const user = useAuthStore((state) => state.user);
   const [mobileOpen, setMobileOpen] = useState(false);
-  // Bukan useState lokal — Layout ini dirender ulang oleh tiap page.tsx (bukan
-  // file layout.tsx App Router), jadi useState di sini akan reset setiap
-  // pindah halaman. State collapse disimpan di Zustand store agar bertahan.
   const collapsed = useUIStore((state) => state.sidebarCollapsed);
   const toggleCollapsed = useUIStore((state) => state.toggleSidebarCollapsed);
 
@@ -34,8 +31,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
   }, [user, router]);
 
-  // Pemisahan menu per role: Teller cuma boleh di luar /admin, Admin/Superadmin
-  // cuma boleh di dalam /admin — supaya masing-masing tidak nyasar ke menu peran lain.
   useEffect(() => {
     if (!user || user.accountType !== "staff") return;
     const inAdminArea = pathname.startsWith("/admin");
@@ -55,8 +50,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         onToggleCollapsed={toggleCollapsed}
       />
       <div className="flex min-w-0 flex-1 flex-col transition-all duration-300 ease-in-out">
-        {/* Satu wrapper padding horizontal untuk Topbar & konten, supaya keduanya
-            SELALU sejajar di semua breakpoint tanpa perlu disamakan manual. */}
         <div className="isolate mx-auto flex w-full max-w-(--breakpoint-2xl) flex-1 flex-col overflow-hidden px-4 md:px-6 2xl:px-10">
           <Topbar onMenuClick={() => setMobileOpen(true)} />
           <main className="flex-1 overflow-y-auto py-4 md:py-6 2xl:py-10">

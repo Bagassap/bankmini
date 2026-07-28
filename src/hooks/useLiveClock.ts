@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 
-/** Jam real-time, mulai null agar render pertama (SSR) sama dengan client sebelum mount. */
 export function useLiveClock() {
   const [now, setNow] = useState<Date | null>(null);
 

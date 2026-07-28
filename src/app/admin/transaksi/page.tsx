@@ -119,7 +119,6 @@ export default function AdminTransaksiPage() {
 
   return (
     <Layout>
-      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -168,14 +167,12 @@ export default function AdminTransaksiPage() {
         </motion.button>
       </motion.div>
 
-      {/* Filter + Ringkasan */}
       <motion.div
         initial="hidden"
         animate="visible"
         variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.1 } } }}
         className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3 md:mb-6 2xl:mb-7.5"
       >
-        {/* Filter card */}
         <motion.div
           variants={cardVariants}
           className="relative flex flex-col overflow-hidden rounded-3xl bg-linear-to-br from-primary to-primary-dark p-6 text-white shadow-soft"
@@ -241,7 +238,6 @@ export default function AdminTransaksiPage() {
           </div>
         </motion.div>
 
-        {/* Ringkasan */}
         <motion.div
           variants={cardVariants}
           className="relative overflow-hidden rounded-3xl bg-background-card p-6 shadow-soft lg:col-span-2"
@@ -334,7 +330,6 @@ export default function AdminTransaksiPage() {
         </motion.div>
       </motion.div>
 
-      {/* Daftar Transaksi */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -470,7 +465,6 @@ export default function AdminTransaksiPage() {
         </motion.div>
       </motion.div>
 
-      {/* Detail modal */}
       <AnimatePresence>
         {viewing && (
           <motion.div

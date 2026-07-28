@@ -5,7 +5,6 @@ interface ExcelSheet {
   rows: Record<string, string | number>[];
 }
 
-/** Bikin & unduh file .xlsx multi-sheet dari data yang sudah disiapkan pemanggil. */
 export function downloadExcel(sheets: ExcelSheet[], filename: string) {
   const wb = XLSX.utils.book_new();
   for (const sheet of sheets) {

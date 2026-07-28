@@ -22,7 +22,6 @@ export const JENIS_ICON: Record<JenisNasabah, LucideIcon> = {
   umum: Users,
 };
 
-/** Warna variasi dashboard (blue/green/orange) dipakai untuk aksen kecil non-tab. */
 export const GUIDE_COLORS = ["#1120f0", "#22c55e", "#ea580c"];
 
 export interface TransaksiMeta {

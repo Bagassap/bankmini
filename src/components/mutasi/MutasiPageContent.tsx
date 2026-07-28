@@ -32,11 +32,6 @@ import type { Nasabah, Transaksi } from "@/lib/types";
 
 const PAGE_SIZE = 8;
 
-/* ---------------------------------------------------------------------- */
-/* Data demo — ditampilkan sebagai tampilan bawaan sebelum teller mencari  */
-/* nasabah sungguhan, supaya halaman tidak pernah terlihat kosong.         */
-/* ---------------------------------------------------------------------- */
-
 const DUMMY_NASABAH: Nasabah = {
   id: "dummy",
   noRekening: "0000000000",
@@ -271,7 +266,6 @@ export function MutasiPageContent() {
 
   return (
     <Layout>
-      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -326,14 +320,12 @@ export function MutasiPageContent() {
         )}
       </motion.div>
 
-      {/* Illustration/CTA + Ringkasan Transaksi */}
       <motion.div
         initial="hidden"
         animate="visible"
         variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.1 } } }}
         className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3 md:mb-6 2xl:mb-7.5"
       >
-        {/* Illustration / CTA card */}
         <motion.div
           variants={cardVariants}
           className="relative flex flex-col overflow-hidden rounded-3xl bg-linear-to-br from-primary to-primary-dark p-6 text-white shadow-soft"
@@ -388,7 +380,6 @@ export function MutasiPageContent() {
           </motion.button>
         </motion.div>
 
-        {/* Ringkasan Transaksi */}
         <motion.div
           variants={cardVariants}
           className="relative overflow-hidden rounded-3xl bg-background-card p-6 shadow-soft lg:col-span-2"
@@ -537,7 +528,6 @@ export function MutasiPageContent() {
         </motion.div>
       </motion.div>
 
-      {/* Riwayat Transaksi */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -671,7 +661,6 @@ export function MutasiPageContent() {
         </motion.div>
       </motion.div>
 
-      {/* Detail modal */}
       <AnimatePresence>
         {viewing && (
           <motion.div

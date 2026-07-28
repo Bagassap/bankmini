@@ -69,7 +69,6 @@ export default function LoginPage() {
 
   return (
     <div className="bg-dot-grid-dark relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-background p-4 sm:p-8">
-      {/* Ambient background glows */}
       <div className="animate-glow-pulse pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-primary/20 blur-3xl" />
       <div
         className="animate-glow-pulse pointer-events-none absolute -bottom-32 -right-20 h-112 w-md rounded-full bg-gradient-via/20 blur-3xl"
@@ -82,7 +81,6 @@ export default function LoginPage() {
         transition={{ duration: 0.6, ease: "easeOut" }}
         className="relative flex w-full max-w-5xl flex-col overflow-hidden rounded-4xl bg-background-card p-3 shadow-2xl shadow-black/10 ring-1 ring-border lg:flex-row lg:p-4"
       >
-        {/* Brand panel: compact bar on mobile, full showcase on desktop */}
         <motion.div
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -94,7 +92,6 @@ export default function LoginPage() {
             <FloatingBlobs />
           </div>
 
-          {/* Logo row: inline title on mobile, standalone mark on desktop */}
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -114,7 +111,6 @@ export default function LoginPage() {
             </span>
           </motion.div>
 
-          {/* Headline + tagline: desktop only */}
           <div className="relative z-10 hidden text-center lg:block">
             <h2 className="flex flex-wrap justify-center gap-x-2.5 text-2xl leading-tight font-black tracking-tight text-white">
               {["Bank", "Digital", "Sekolah"].map((word, i) => (
@@ -149,7 +145,6 @@ export default function LoginPage() {
           </div>
         </motion.div>
 
-        {/* Form panel */}
         <div className="order-2 flex w-full flex-col justify-center px-6 py-8 lg:w-[60%] lg:px-14 lg:py-12">
           <motion.form
             onSubmit={handleSubmit}
