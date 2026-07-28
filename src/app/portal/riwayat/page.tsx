@@ -20,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import Layout from "@/components/Layout";
+import { DateRangePicker } from "@/components/DateRangePicker";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -162,31 +163,8 @@ export default function RiwayatPage() {
             ))}
           </div>
 
-          <div className="relative mt-4 space-y-3">
-            <div>
-              <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-white/70 uppercase tracking-wide">
-                <Calendar size={11} />
-                Dari Tanggal
-              </label>
-              <input
-                type="date"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                className="w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm text-white backdrop-blur-sm focus:border-white/50 focus:outline-none [color-scheme:dark]"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-white/70 uppercase tracking-wide">
-                <Calendar size={11} />
-                Sampai Tanggal
-              </label>
-              <input
-                type="date"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                className="w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm text-white backdrop-blur-sm focus:border-white/50 focus:outline-none [color-scheme:dark]"
-              />
-            </div>
+          <div className="relative mt-4">
+            <DateRangePicker from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
           </div>
         </motion.div>
 
