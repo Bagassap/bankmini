@@ -118,17 +118,6 @@ export default function ProfilPage() {
 
   return (
     <Layout>
-      <motion.div
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="mb-5 md:mb-7 2xl:mb-8"
-      >
-        <h1 className="text-2xl font-bold text-text-primary">Profil Saya</h1>
-        <p className="text-sm text-text-secondary">
-          Kelola data kontak &amp; keamanan akun Anda.
-        </p>
-      </motion.div>
 
       {loading || !profile ? (
         <p className="text-sm text-text-secondary">Memuat data...</p>

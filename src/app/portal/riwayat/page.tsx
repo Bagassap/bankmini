@@ -18,7 +18,6 @@ import {
   Tag,
   Wallet,
   X,
-  Zap,
 } from "lucide-react";
 import Layout from "@/components/Layout";
 import api from "@/lib/api";
@@ -109,30 +108,6 @@ export default function RiwayatPage() {
 
   return (
     <Layout>
-      <motion.div
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="mb-5 flex flex-col justify-between gap-4 md:mb-7 md:flex-row md:items-end 2xl:mb-8"
-      >
-        <div>
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary">
-              <motion.span
-                animate={{ opacity: [1, 0.3, 1] }}
-                transition={{ duration: 1.6, repeat: Infinity }}
-                className="h-1.5 w-1.5 rounded-full bg-primary"
-              />
-              <Zap size={11} />
-              Live Data
-            </span>
-          </div>
-          <h1 className="text-2xl font-bold text-text-primary">Riwayat Transaksi</h1>
-          <p className="text-sm text-text-secondary">
-            Semua setoran &amp; penarikan pada rekening Anda.
-          </p>
-        </div>
-      </motion.div>
 
       <motion.div
         initial="hidden"

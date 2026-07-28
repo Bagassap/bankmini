@@ -10,6 +10,7 @@ import {
   ArrowUpFromLine,
   Calendar,
   CalendarHeart,
+  CheckCircle2,
   ClipboardList,
   History,
   PieChart,
@@ -229,19 +230,33 @@ export default function PortalDashboardPage() {
             <div className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
 
             <div className="relative flex flex-col justify-between gap-6 sm:flex-row sm:items-center">
-              <div>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-bold backdrop-blur-sm">
-                  <ShieldCheck size={12} />
-                  {JENIS_LABEL[profile.jenisNasabah]} &middot; {profile.noRekening}
-                </span>
-                <p className="mt-4 flex items-center gap-1.5 text-xs font-semibold tracking-widest text-white/70 uppercase">
-                  <Wallet size={13} />
-                  Saldo Saat Ini
-                </p>
-                <AnimatedCurrency
-                  value={Number(profile.saldo)}
-                  className="mt-1 block text-4xl font-bold sm:text-5xl"
-                />
+              <div className="flex items-start gap-4">
+                <motion.span
+                  initial={{ scale: 0.6, opacity: 0, rotate: -15 }}
+                  animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                  whileHover={{ scale: 1.08, rotate: 6 }}
+                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm"
+                >
+                  <Wallet size={22} />
+                </motion.span>
+                <div>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-bold backdrop-blur-sm">
+                    <ShieldCheck size={12} />
+                    {JENIS_LABEL[profile.jenisNasabah]} &middot; {profile.noRekening}
+                  </span>
+                  <p className="mt-3 text-xs font-semibold tracking-widest text-white/70 uppercase">
+                    Saldo Saat Ini
+                  </p>
+                  <AnimatedCurrency
+                    value={Number(profile.saldo)}
+                    className="mt-1 block text-4xl font-bold sm:text-5xl"
+                  />
+                  <p className="mt-2 flex items-center gap-1.5 text-xs text-white/70">
+                    <CheckCircle2 size={13} />
+                    Saldo aktif &middot; Diperbarui {formatDate(profile.updatedAt)}
+                  </p>
+                </div>
               </div>
 
               <div className="flex flex-wrap gap-3">
