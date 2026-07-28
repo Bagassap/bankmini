@@ -403,13 +403,13 @@ export function MutasiPageContent() {
             </motion.button>
           </form>
 
-          <div className="relative flex flex-col gap-6 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative flex flex-col gap-6 border-t border-border pt-5 md:flex-row md:items-center md:justify-between">
             <div className="flex-1">
               <motion.div
                 initial="hidden"
                 animate="visible"
                 variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.08 } } }}
-                className="grid grid-cols-3 gap-3"
+                className="grid grid-cols-2 gap-3 sm:grid-cols-3"
               >
                 {[
                   {
@@ -452,9 +452,13 @@ export function MutasiPageContent() {
                     >
                       <tile.icon size={14} />
                     </motion.span>
-                    <p className="relative mt-2.5 text-xl font-bold">{tile.value}</p>
-                    <p className="relative text-[10px] font-semibold text-white/85">{tile.label}</p>
-                    <p className="relative mt-0.5 text-[9px] text-white/60">{tile.caption}</p>
+                    <div className="relative mt-2.5 flex items-center gap-2">
+                      <p className="text-xl font-bold">{tile.value}</p>
+                      <div className="min-w-0 leading-tight">
+                        <p className="truncate text-[10px] font-semibold text-white/85">{tile.label}</p>
+                        <p className="truncate text-[9px] text-white/60">{tile.caption}</p>
+                      </div>
+                    </div>
                   </motion.div>
                 ))}
               </motion.div>
