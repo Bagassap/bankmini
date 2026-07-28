@@ -13,14 +13,17 @@ import {
   ClipboardList,
   Eye,
   Hash,
+  History,
   Loader2,
   Search,
   Tag,
+  TrendingUp,
   Wallet,
   X,
 } from "lucide-react";
 import Layout from "@/components/Layout";
 import { DateRangePicker } from "@/components/DateRangePicker";
+import { RatioRing } from "@/components/RatioRing";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -94,12 +97,18 @@ export default function RiwayatPage() {
     const totalSetor = setorList.reduce((sum, t) => sum + Number(t.jumlah), 0);
     const totalTarik = tarikList.reduce((sum, t) => sum + Number(t.jumlah), 0);
     const totalVolume = totalSetor + totalTarik;
+    const sorted = [...filtered].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
     return {
       setorCount: setorList.length,
       tarikCount: tarikList.length,
       totalSetor,
       totalTarik,
       setorShare: totalVolume > 0 ? Math.round((totalSetor / totalVolume) * 100) : 0,
+      rataRata: filtered.length > 0 ? totalVolume / filtered.length : 0,
+      earliest: sorted[0]?.createdAt,
+      latest: sorted[sorted.length - 1]?.createdAt,
     };
   }, [filtered]);
 
@@ -189,46 +198,49 @@ export default function RiwayatPage() {
             </div>
           </div>
 
-          <div className="relative grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {[
-              {
-                label: "Total Transaksi",
-                caption: "Tercatat",
-                value: filtered.length,
-                icon: ClipboardList,
-                gradient: "from-primary to-primary-dark",
-              },
-              {
-                label: "Setor",
-                caption: formatCurrency(stats.totalSetor),
-                value: stats.setorCount,
-                icon: ArrowDownToLine,
-                gradient: "from-gradient-green-from to-gradient-green-to",
-              },
-              {
-                label: "Tarik",
-                caption: formatCurrency(stats.totalTarik),
-                value: stats.tarikCount,
-                icon: ArrowUpFromLine,
-                gradient: "from-gradient-orange-from to-gradient-orange-to",
-              },
-            ].map((tile) => (
-              <div
-                key={tile.label}
-                className={`relative overflow-hidden rounded-2xl bg-linear-to-br p-4 text-white shadow-sm ${tile.gradient}`}
-              >
+          <div className="relative flex flex-col items-center gap-6 md:flex-row">
+            <RatioRing percent={stats.setorShare} color="#1120f0" />
+            <div className="grid w-full flex-1 grid-cols-1 gap-3 sm:grid-cols-3">
+              {[
+                {
+                  label: "Total Transaksi",
+                  caption: "Tercatat",
+                  value: filtered.length,
+                  icon: ClipboardList,
+                  gradient: "from-primary to-primary-dark",
+                },
+                {
+                  label: "Setor",
+                  caption: formatCurrency(stats.totalSetor),
+                  value: stats.setorCount,
+                  icon: ArrowDownToLine,
+                  gradient: "from-gradient-green-from to-gradient-green-to",
+                },
+                {
+                  label: "Tarik",
+                  caption: formatCurrency(stats.totalTarik),
+                  value: stats.tarikCount,
+                  icon: ArrowUpFromLine,
+                  gradient: "from-gradient-orange-from to-gradient-orange-to",
+                },
+              ].map((tile) => (
                 <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 opacity-20 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_1px,transparent_1px)] bg-size-[12px_12px]"
-                />
-                <span className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
-                  <tile.icon size={15} />
-                </span>
-                <p className="relative mt-3 text-2xl font-bold">{tile.value}</p>
-                <p className="relative text-[11px] font-semibold text-white/85">{tile.label}</p>
-                <p className="relative mt-0.5 text-[10px] text-white/60">{tile.caption}</p>
-              </div>
-            ))}
+                  key={tile.label}
+                  className={`relative overflow-hidden rounded-2xl bg-linear-to-br p-4 text-white shadow-sm ${tile.gradient}`}
+                >
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 opacity-20 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_1px,transparent_1px)] bg-size-[12px_12px]"
+                  />
+                  <span className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
+                    <tile.icon size={15} />
+                  </span>
+                  <p className="relative mt-3 text-2xl font-bold">{tile.value}</p>
+                  <p className="relative text-[11px] font-semibold text-white/85">{tile.label}</p>
+                  <p className="relative mt-0.5 text-[10px] text-white/60">{tile.caption}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="relative mt-5 flex items-center gap-2 border-t border-border pt-4 text-xs">
@@ -245,6 +257,21 @@ export default function RiwayatPage() {
               {stats.setorShare}% : {100 - stats.setorShare}%
             </span>
           </div>
+
+          {filtered.length > 0 && (
+            <div className="relative mt-3 flex flex-wrap items-center gap-2 text-[11px]">
+              <span className="flex items-center gap-1.5 rounded-full bg-background-hover px-2.5 py-1 font-semibold text-text-secondary">
+                <TrendingUp size={12} className="text-primary" />
+                Rata-rata {formatCurrency(stats.rataRata)}/transaksi
+              </span>
+              {stats.earliest && (
+                <span className="flex items-center gap-1.5 rounded-full bg-background-hover px-2.5 py-1 font-semibold text-text-secondary">
+                  <History size={12} className="text-primary" />
+                  Sejak {formatDate(stats.earliest)}
+                </span>
+              )}
+            </div>
+          )}
         </motion.div>
       </motion.div>
 

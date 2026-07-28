@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import {
+  AlertCircle,
   BookUser,
   Calendar,
   CheckCircle2,
+  Circle,
   Edit3,
   Eye,
   EyeOff,
@@ -18,7 +20,10 @@ import {
   Lock,
   Phone,
   Save,
+  ShieldAlert,
   ShieldCheck,
+  ShieldQuestion,
+  Sparkles,
   User as UserIcon,
   Users,
   Wallet,
@@ -45,6 +50,24 @@ const JENIS_ICON: Record<JenisNasabah, typeof GraduationCap> = {
 
 const inputClass =
   "w-full rounded-xl border border-transparent bg-background-hover px-3 py-2.5 text-sm text-text-primary transition-shadow focus:border-primary focus:bg-background-card focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60";
+
+const PASSWORD_STRENGTH = [
+  { label: "Kosong", color: "bg-background-hover", text: "text-text-muted", icon: ShieldQuestion },
+  { label: "Lemah", color: "bg-danger", text: "text-danger", icon: ShieldAlert },
+  { label: "Sedang", color: "bg-warning", text: "text-warning", icon: ShieldAlert },
+  { label: "Kuat", color: "bg-success", text: "text-success", icon: ShieldCheck },
+] as const;
+
+function getPasswordStrength(password: string): 0 | 1 | 2 | 3 {
+  if (!password) return 0;
+  let score = 0;
+  if (password.length >= 4) score++;
+  if (password.length >= 8) score++;
+  if (/[0-9]/.test(password) && /[a-zA-Z]/.test(password)) score++;
+  if (score <= 1) return 1;
+  if (score === 2) return 2;
+  return 3;
+}
 
 export default function ProfilPage() {
   const user = useAuthStore((state) => state.user);
@@ -115,6 +138,10 @@ export default function ProfilPage() {
   }
 
   const initials = (user?.nama ?? "?").slice(0, 2).toUpperCase();
+  const contactFieldsFilled = [profile?.alamat, profile?.noTelepon].filter(Boolean).length;
+  const contactComplete = contactFieldsFilled === 2;
+  const passwordStrength = getPasswordStrength(newPassword);
+  const passwordsMatch = newPassword.length > 0 && newPassword === confirmPassword;
 
   return (
     <Layout>
@@ -231,8 +258,14 @@ export default function ProfilPage() {
                 aria-hidden
                 className="pointer-events-none absolute inset-0 opacity-[0.03] bg-[radial-gradient(circle,rgba(17,32,240,0.9)_1px,transparent_1px)] bg-size-[16px_16px]"
               />
+              <Home
+                aria-hidden
+                size={120}
+                strokeWidth={1}
+                className="pointer-events-none absolute -top-6 -right-6 text-primary/5"
+              />
 
-              <div className="relative mb-5 flex items-center justify-between gap-3">
+              <div className="relative mb-1 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <Home size={18} />
@@ -242,19 +275,35 @@ export default function ProfilPage() {
                     <p className="text-xs text-text-secondary">Alamat &amp; nomor telepon Anda</p>
                   </div>
                 </div>
-                {!editing && (
-                  <motion.button
-                    type="button"
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => setEditing(true)}
-                    className="flex items-center gap-1.5 rounded-xl bg-primary/10 px-3.5 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                      contactComplete
+                        ? "bg-success/15 text-success"
+                        : "bg-warning/15 text-warning"
+                    }`}
                   >
-                    <Edit3 size={13} />
-                    Edit
-                  </motion.button>
-                )}
+                    {contactComplete ? <CheckCircle2 size={11} /> : <AlertCircle size={11} />}
+                    {contactFieldsFilled}/2 Lengkap
+                  </span>
+                  {!editing && (
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => setEditing(true)}
+                      className="flex items-center gap-1.5 rounded-xl bg-primary/10 px-3.5 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
+                    >
+                      <Edit3 size={13} />
+                      Edit
+                    </motion.button>
+                  )}
+                </div>
               </div>
+              <p className="relative mb-5 flex items-center gap-1.5 text-[11px] text-text-muted">
+                <Sparkles size={11} className="shrink-0 text-primary" />
+                Data ini digunakan untuk komunikasi terkait rekening Anda
+              </p>
 
               <form onSubmit={handleSaveProfile} className="relative space-y-4">
                 <div>
@@ -329,6 +378,12 @@ export default function ProfilPage() {
                 aria-hidden
                 className="pointer-events-none absolute inset-0 opacity-[0.03] bg-[radial-gradient(circle,rgba(17,32,240,0.9)_1px,transparent_1px)] bg-size-[16px_16px]"
               />
+              <KeyRound
+                aria-hidden
+                size={120}
+                strokeWidth={1}
+                className="pointer-events-none absolute -top-6 -right-6 text-warning/5"
+              />
 
               <div className="relative mb-5 flex items-center gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/15 text-warning">
@@ -388,6 +443,70 @@ export default function ProfilPage() {
                     />
                   </div>
                 </div>
+
+                {newPassword.length > 0 && (
+                  <div className="rounded-2xl bg-background-hover p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        {(() => {
+                          const StrengthIcon = PASSWORD_STRENGTH[passwordStrength].icon;
+                          return (
+                            <StrengthIcon
+                              size={14}
+                              className={PASSWORD_STRENGTH[passwordStrength].text}
+                            />
+                          );
+                        })()}
+                        <span
+                          className={`text-xs font-bold ${PASSWORD_STRENGTH[passwordStrength].text}`}
+                        >
+                          Kekuatan: {PASSWORD_STRENGTH[passwordStrength].label}
+                        </span>
+                      </div>
+                      {confirmPassword.length > 0 && (
+                        <span
+                          className={`flex items-center gap-1 text-[10px] font-semibold ${
+                            passwordsMatch ? "text-success" : "text-danger"
+                          }`}
+                        >
+                          {passwordsMatch ? <CheckCircle2 size={11} /> : <AlertCircle size={11} />}
+                          {passwordsMatch ? "Cocok" : "Belum cocok"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-2 grid grid-cols-3 gap-1.5">
+                      {[1, 2, 3].map((level) => (
+                        <motion.div
+                          key={level}
+                          initial={{ scaleX: 0 }}
+                          animate={{ scaleX: level <= passwordStrength ? 1 : 0.15 }}
+                          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                          className={`h-1.5 origin-left rounded-full ${
+                            level <= passwordStrength
+                              ? PASSWORD_STRENGTH[passwordStrength].color
+                              : "bg-border"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <div className="mt-2.5 flex flex-wrap gap-x-3 gap-y-1">
+                      {[
+                        { label: "Min. 4 karakter", met: newPassword.length >= 4 },
+                        { label: "Kombinasi huruf & angka", met: /[0-9]/.test(newPassword) && /[a-zA-Z]/.test(newPassword) },
+                      ].map((req) => (
+                        <span
+                          key={req.label}
+                          className={`flex items-center gap-1 text-[10px] font-medium ${
+                            req.met ? "text-success" : "text-text-muted"
+                          }`}
+                        >
+                          {req.met ? <CheckCircle2 size={11} /> : <Circle size={11} />}
+                          {req.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <button
