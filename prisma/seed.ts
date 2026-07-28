@@ -55,8 +55,8 @@ async function main() {
   const noRekeningSiswa = buildNoRekening(1);
   const usernameSiswa = '2025001';
   await prisma.nasabah.upsert({
-    where: { noRekening: noRekeningSiswa },
-    update: { username: usernameSiswa },
+    where: { username: usernameSiswa },
+    update: {},
     create: {
       noRekening: noRekeningSiswa,
       nama: 'Siswa Contoh',
@@ -76,8 +76,8 @@ async function main() {
   const noRekeningGuru = buildNoRekening(2);
   const usernameGuru = '198501012010012001';
   await prisma.nasabah.upsert({
-    where: { noRekening: noRekeningGuru },
-    update: { username: usernameGuru },
+    where: { username: usernameGuru },
+    update: {},
     create: {
       noRekening: noRekeningGuru,
       nama: 'Guru Contoh',
@@ -107,6 +107,62 @@ async function main() {
       tanggalLahir: new Date('1990-03-20'),
       username: null,
       password: null,
+    },
+  });
+
+  const noRekeningSiswaTest = buildNoRekening(4);
+  await prisma.nasabah.upsert({
+    where: { username: '121212' },
+    update: { password: await bcrypt.hash('siswa123', 10) },
+    create: {
+      noRekening: noRekeningSiswaTest,
+      nama: 'Nasabah Siswa Test',
+      jenisNasabah: 'siswa',
+      nis: '121212',
+      kelas: 'XI',
+      jurusan: 'TKJ',
+      jenisKelamin: 'L',
+      alamat: 'Jl. Siswa Test No. 1',
+      noTelepon: '081200000004',
+      tanggalLahir: new Date('2009-01-01'),
+      username: '121212',
+      password: await bcrypt.hash('siswa123', 10),
+    },
+  });
+
+  const noRekeningGuruTest = buildNoRekening(5);
+  await prisma.nasabah.upsert({
+    where: { username: '191919' },
+    update: { password: await bcrypt.hash('guru123', 10) },
+    create: {
+      noRekening: noRekeningGuruTest,
+      nama: 'Nasabah Guru Test',
+      jenisNasabah: 'guru',
+      nip: '191919',
+      jabatan: 'Guru Test',
+      jenisKelamin: 'P',
+      alamat: 'Jl. Guru Test No. 1',
+      noTelepon: '081200000005',
+      tanggalLahir: new Date('1988-01-01'),
+      username: '191919',
+      password: await bcrypt.hash('guru123', 10),
+    },
+  });
+
+  const noRekeningUmumTest = buildNoRekening(6);
+  await prisma.nasabah.upsert({
+    where: { username: '181818' },
+    update: { password: await bcrypt.hash('umum123', 10) },
+    create: {
+      noRekening: noRekeningUmumTest,
+      nama: 'Nasabah Umum Test',
+      jenisNasabah: 'umum',
+      jenisKelamin: 'L',
+      alamat: 'Jl. Umum Test No. 1',
+      noTelepon: '081200000006',
+      tanggalLahir: new Date('1992-01-01'),
+      username: '181818',
+      password: await bcrypt.hash('umum123', 10),
     },
   });
 }
