@@ -377,68 +377,67 @@ export default function AdminTransaksiPage() {
                 <motion.div
                   key={trx.id}
                   variants={rowVariants}
-                  className="flex flex-col gap-3 p-5 transition-colors hover:bg-background-hover sm:flex-row sm:items-center"
+                  className="flex items-start gap-3 p-4 transition-colors hover:bg-background-hover sm:p-5"
                 >
-                  <div className="flex shrink-0 items-center gap-3 sm:w-56">
-                    <span
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
-                        isSetor ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
-                      }`}
-                    >
-                      {isSetor ? <ArrowDownToLine size={16} /> : <ArrowUpFromLine size={16} />}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-text-primary">
-                        {trx.nasabah?.nama ?? "-"}
-                      </p>
-                      <p className="font-mono text-[11px] text-text-muted">
-                        {trx.nasabah?.noRekening ?? "-"}
-                      </p>
-                    </div>
-                  </div>
+                  <span
+                    className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                      isSetor ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
+                    }`}
+                  >
+                    {isSetor ? <ArrowDownToLine size={16} /> : <ArrowUpFromLine size={16} />}
+                  </span>
 
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-text-primary capitalize">
-                      {isSetor ? "Setor Tunai" : "Tarik Tunai"}
-                    </p>
-                    <p className="flex items-center gap-1 truncate text-xs text-text-muted">
-                      <Tag size={11} />
-                      {formatDate(trx.createdAt)} &middot; {trx.keterangan ?? "-"}
-                    </p>
-                    <div className="mt-2 flex items-center gap-2">
-                      <div className="h-1.5 w-full max-w-40 overflow-hidden rounded-full bg-background-hover">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${percent}%` }}
-                          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                          className={`h-full rounded-full ${isSetor ? "bg-success" : "bg-danger"}`}
-                        />
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-text-primary">
+                          {trx.nasabah?.nama ?? "-"}
+                        </p>
+                        <p className="truncate text-xs text-text-muted">
+                          <span className="font-mono">{trx.nasabah?.noRekening ?? "-"}</span>
+                          {" "}&middot; {isSetor ? "Setor" : "Tarik"} &middot; {formatDate(trx.createdAt)}
+                        </p>
                       </div>
-                      <span className="shrink-0 text-[10px] font-semibold text-text-muted">
-                        {percent}%
-                      </span>
+                      <div className="shrink-0 text-right">
+                        <p className={`font-bold ${isSetor ? "text-success" : "text-danger"}`}>
+                          {isSetor ? "+" : "-"}
+                          {formatCurrency(trx.jumlah)}
+                        </p>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-medium text-success">
+                          <CheckCircle2 size={10} />
+                          Success
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex shrink-0 items-center gap-4 sm:justify-end">
-                    <div className="text-right">
-                      <p className={`font-bold ${isSetor ? "text-success" : "text-danger"}`}>
-                        {isSetor ? "+" : "-"}
-                        {formatCurrency(trx.jumlah)}
-                      </p>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-medium text-success">
-                        <CheckCircle2 size={10} />
-                        Success
-                      </span>
+                    <p className="mt-1.5 flex items-center gap-1 truncate text-xs text-text-muted">
+                      <Tag size={11} className="shrink-0" />
+                      {trx.keterangan ?? "-"}
+                    </p>
+
+                    <div className="mt-2 flex items-center gap-3">
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
+                        <div className="h-1.5 w-full max-w-32 overflow-hidden rounded-full bg-background-hover">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${percent}%` }}
+                            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                            className={`h-full rounded-full ${isSetor ? "bg-success" : "bg-danger"}`}
+                          />
+                        </div>
+                        <span className="shrink-0 text-[10px] font-semibold text-text-muted">
+                          {percent}%
+                        </span>
+                      </div>
+                      <motion.button
+                        whileTap={{ scale: 0.92 }}
+                        onClick={() => setViewing(trx)}
+                        className="flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
+                      >
+                        <Eye size={12} />
+                        Detail
+                      </motion.button>
                     </div>
-                    <motion.button
-                      whileTap={{ scale: 0.92 }}
-                      onClick={() => setViewing(trx)}
-                      className="flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
-                    >
-                      <Eye size={12} />
-                      Detail
-                    </motion.button>
                   </div>
                 </motion.div>
               );
