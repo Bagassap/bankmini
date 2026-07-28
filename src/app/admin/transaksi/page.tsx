@@ -241,7 +241,7 @@ export default function AdminTransaksiPage() {
             initial="hidden"
             animate="visible"
             variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.08 } } }}
-            className="relative grid grid-cols-2 gap-3 sm:grid-cols-3"
+            className="relative grid grid-cols-3 gap-3"
           >
             {[
               {

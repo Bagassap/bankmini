@@ -200,7 +200,7 @@ export default function RiwayatPage() {
 
           <div className="relative flex flex-col items-center gap-6 md:flex-row">
             <RatioRing percent={stats.setorShare} color="#1120f0" />
-            <div className="grid w-full flex-1 grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="grid w-full flex-1 grid-cols-3 gap-3">
               {[
                 {
                   label: "Total Transaksi",

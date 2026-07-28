@@ -1036,7 +1036,7 @@ export function NasabahPageContent() {
                 node: (
                   <AnimatedCurrency
                     value={totalSaldoTab}
-                    className="block text-lg font-bold text-white"
+                    className="block text-xs font-bold wrap-break-word text-white sm:text-lg"
                   />
                 ),
               },
@@ -1048,7 +1048,7 @@ export function NasabahPageContent() {
                 node: (
                   <AnimatedCurrency
                     value={rataSaldoTab}
-                    className="block text-lg font-bold text-white"
+                    className="block text-xs font-bold wrap-break-word text-white sm:text-lg"
                   />
                 ),
               },
@@ -1066,19 +1066,21 @@ export function NasabahPageContent() {
                   aria-hidden
                   className="pointer-events-none absolute inset-0 opacity-20 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_1px,transparent_1px)] bg-size-[12px_12px]"
                 />
-                <div className="relative flex items-center gap-2.5">
+                <div className="relative min-w-0">
                   <motion.span
                     initial={{ scale: 0.6, opacity: 0, rotate: -15 }}
                     animate={{ scale: 1, opacity: 1, rotate: 0 }}
                     transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm"
                   >
-                    <stat.icon size={16} />
+                    <stat.icon size={15} />
                   </motion.span>
-                  <div className="min-w-0">
-                    <p className="text-xs text-white/80">{stat.label}</p>
+                  <div className="mt-2 min-w-0">
                     {stat.node}
-                    <p className="truncate text-[10px] text-white/60">{stat.caption}</p>
+                    <p className="mt-0.5 truncate text-[10px] font-semibold text-white/80">
+                      {stat.label}
+                    </p>
+                    <p className="truncate text-[9px] text-white/60">{stat.caption}</p>
                   </div>
                 </div>
               </motion.div>

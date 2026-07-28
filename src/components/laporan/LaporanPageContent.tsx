@@ -221,7 +221,9 @@ function StatCard({ label, value, change, trend, icon: Icon, caption, gradient }
         </span>
       </div>
       <p className="relative text-sm text-text-secondary">{label}</p>
-      <p className="relative mt-1 text-2xl font-bold text-text-primary">{value}</p>
+      <p className="relative mt-1 text-sm font-bold wrap-break-word text-text-primary sm:text-lg lg:text-2xl">
+        {value}
+      </p>
       <p className="relative mt-1 text-xs text-text-muted">{caption}</p>
     </motion.div>
   );
@@ -405,7 +407,7 @@ export function LaporanPageContent() {
         initial="hidden"
         animate="visible"
         variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.08 } } }}
-        className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:mb-6 lg:grid-cols-4 2xl:mb-7.5"
+        className="mb-4 grid grid-cols-2 gap-4 md:mb-6 2xl:mb-7.5"
       >
         {stats.map((stat) => (
           <StatCard key={stat.label} {...stat} />
