@@ -221,7 +221,7 @@ export default function DashboardPage() {
             initial="hidden"
             animate="visible"
             variants={statsContainerVariants}
-            className="grid grid-cols-2 gap-4 md:gap-6 2xl:gap-7.5"
+            className="grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-4 2xl:gap-7.5"
           >
             <GradientStatCard
               tone="orange"

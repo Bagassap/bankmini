@@ -64,7 +64,7 @@ export function GradientStatCard({
       </p>
       <AnimatedCurrency
         value={value}
-        className="relative mt-1 block text-sm font-bold wrap-break-word sm:text-lg lg:text-2xl"
+        className="relative mt-1 block text-sm font-bold wrap-break-word sm:text-lg lg:text-sm 2xl:text-2xl"
       />
       {caption && (
         <p className="relative mt-1 text-xs text-white/70">{caption}</p>
