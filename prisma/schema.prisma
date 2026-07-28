@@ -1,4 +1,3 @@
-
 generator client {
   provider     = "prisma-client"
   output       = "../src/generated/prisma"
@@ -20,6 +19,7 @@ enum JenisNasabah {
   siswa
   guru
   umum
+  kelas
 }
 
 enum JenisKelamin {
@@ -54,27 +54,28 @@ model User {
 }
 
 model Nasabah {
-  id           String        @id @default(uuid())
-  noRekening   String        @unique
-  nama         String
-  jenisNasabah JenisNasabah
-  nis          String?
-  kelas        String?
-  jurusan      String?
-  nip          String?
-  jabatan      String?
-  alamat       String?
-  noTelepon    String?
-  jenisKelamin JenisKelamin?
-  tanggalLahir DateTime?
-  saldo        Decimal       @default(0) @db.Decimal(15, 2)
-  status       StatusNasabah @default(aktif)
-  username     String?       @unique
-  password     String?
-  isActive     Boolean       @default(true)
-  lastLogin    DateTime?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id            String        @id @default(uuid())
+  noRekening    String        @unique
+  nama          String
+  jenisNasabah  JenisNasabah
+  nis           String?
+  kelas         String?
+  jurusan       String?
+  nip           String?
+  jabatan       String?
+  alamat        String?
+  tahunAngkatan String?
+  noTelepon     String?
+  jenisKelamin  JenisKelamin?
+  tanggalLahir  DateTime?
+  saldo         Decimal       @default(0) @db.Decimal(15, 2)
+  status        StatusNasabah @default(aktif)
+  username      String?       @unique
+  password      String?
+  isActive      Boolean       @default(true)
+  lastLogin     DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   transaksi Transaksi[]
 

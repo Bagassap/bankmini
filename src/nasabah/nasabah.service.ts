@@ -19,6 +19,7 @@ export interface CreateNasabahInput {
   nip?: string;
   jabatan?: string;
   alamat?: string;
+  tahunAngkatan?: string;
   noTelepon?: string;
   jenisKelamin?: 'L' | 'P';
   tanggalLahir?: Date;
@@ -33,6 +34,7 @@ export interface UpdateNasabahInput {
   nip?: string;
   jabatan?: string;
   alamat?: string;
+  tahunAngkatan?: string;
   noTelepon?: string;
   jenisKelamin?: 'L' | 'P';
   tanggalLahir?: Date;
@@ -150,10 +152,15 @@ export class NasabahService {
     const dd = String(now.getDate()).padStart(2, '0');
     const prefix = `BM${yy}${mm}${dd}`;
 
-    const count = await tx.nasabah.count({
+    const last = await tx.nasabah.findFirst({
       where: { noRekening: { startsWith: prefix } },
+      orderBy: { noRekening: 'desc' },
+      select: { noRekening: true },
     });
-    const sequence = String(count + 1).padStart(4, '0');
+    const lastSequence = last
+      ? parseInt(last.noRekening.slice(prefix.length), 10)
+      : 0;
+    const sequence = String(lastSequence + 1).padStart(4, '0');
     return `${prefix}${sequence}`;
   }
 
@@ -177,6 +184,7 @@ export class NasabahService {
               nip: input.nip,
               jabatan: input.jabatan,
               alamat: input.alamat,
+              tahunAngkatan: input.tahunAngkatan,
               noTelepon: input.noTelepon,
               jenisKelamin: input.jenisKelamin,
               tanggalLahir: input.tanggalLahir,

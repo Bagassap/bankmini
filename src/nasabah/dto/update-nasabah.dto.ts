@@ -12,7 +12,7 @@ export class UpdateNasabahDto {
   nama?: string;
 
   @IsOptional()
-  @IsIn(['siswa', 'guru', 'umum'])
+  @IsIn(['siswa', 'guru', 'umum', 'kelas'])
   jenisNasabah?: JenisNasabah;
 
   @IsOptional()
@@ -38,6 +38,10 @@ export class UpdateNasabahDto {
   @IsOptional()
   @IsString()
   alamat?: string;
+
+  @IsOptional()
+  @IsString()
+  tahunAngkatan?: string;
 
   @IsOptional()
   @IsString()
