@@ -200,7 +200,7 @@ export default function RiwayatPage() {
 
           <div className="relative flex flex-col items-center gap-6 md:flex-row">
             <RatioRing percent={stats.setorShare} color="#1120f0" />
-            <div className="grid w-full flex-1 grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="grid w-full flex-1 grid-cols-2 gap-3 sm:grid-cols-3">
               {[
                 {
                   label: "Total Transaksi",
@@ -235,9 +235,13 @@ export default function RiwayatPage() {
                   <span className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
                     <tile.icon size={15} />
                   </span>
-                  <p className="relative mt-3 text-2xl font-bold">{tile.value}</p>
-                  <p className="relative text-[11px] font-semibold text-white/85">{tile.label}</p>
-                  <p className="relative mt-0.5 text-[10px] text-white/60">{tile.caption}</p>
+                  <div className="relative mt-3 flex items-center gap-2">
+                    <p className="text-2xl font-bold">{tile.value}</p>
+                    <div className="min-w-0 leading-tight">
+                      <p className="truncate text-[11px] font-semibold text-white/85">{tile.label}</p>
+                      <p className="truncate text-[10px] text-white/60">{tile.caption}</p>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>

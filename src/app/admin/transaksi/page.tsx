@@ -241,7 +241,7 @@ export default function AdminTransaksiPage() {
             initial="hidden"
             animate="visible"
             variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.08 } } }}
-            className="relative grid grid-cols-1 gap-3 sm:grid-cols-3"
+            className="relative grid grid-cols-2 gap-3 sm:grid-cols-3"
           >
             {[
               {
@@ -284,9 +284,13 @@ export default function AdminTransaksiPage() {
                 >
                   <tile.icon size={15} />
                 </motion.span>
-                <p className="relative mt-3 text-2xl font-bold">{tile.value}</p>
-                <p className="relative text-[11px] font-semibold text-white/85">{tile.label}</p>
-                <p className="relative mt-0.5 text-[10px] text-white/60">{tile.caption}</p>
+                <div className="relative mt-3 flex items-center gap-2">
+                  <p className="text-2xl font-bold">{tile.value}</p>
+                  <div className="min-w-0 leading-tight">
+                    <p className="truncate text-[11px] font-semibold text-white/85">{tile.label}</p>
+                    <p className="truncate text-[10px] text-white/60">{tile.caption}</p>
+                  </div>
+                </div>
               </motion.div>
             ))}
           </motion.div>
