@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { isLoggedIn } from "@/lib/auth";
-import { isAdminRole, isTellerRole } from "@/lib/role";
+import { isAdminRole, isNasabahRole, isTellerRole } from "@/lib/role";
 import { useAuthStore } from "@/store/authStore";
 import { useUIStore } from "@/store/uiStore";
 import Sidebar from "./Sidebar";
@@ -26,17 +26,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [hydrate, router]);
 
   useEffect(() => {
-    if (user && user.accountType !== "staff") {
-      router.replace("/portal");
+    if (!user) return;
+    if (isNasabahRole(user)) {
+      if (!pathname.startsWith("/portal")) {
+        router.replace("/portal/beranda");
+      }
+      return;
     }
-  }, [user, router]);
-
-  useEffect(() => {
-    if (!user || user.accountType !== "staff") return;
     const inAdminArea = pathname.startsWith("/admin");
     if (isAdminRole(user) && !inAdminArea) {
       router.replace("/admin/dashboard");
-    } else if (isTellerRole(user) && inAdminArea) {
+    } else if (isTellerRole(user) && (inAdminArea || pathname.startsWith("/portal"))) {
       router.replace("/dashboard");
     }
   }, [user, pathname, router]);

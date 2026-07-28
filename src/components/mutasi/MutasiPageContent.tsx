@@ -39,6 +39,7 @@ const DUMMY_NASABAH: Nasabah = {
   jenisNasabah: "umum",
   saldo: 2_250_000,
   status: "aktif",
+  isActive: true,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };

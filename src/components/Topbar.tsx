@@ -13,6 +13,7 @@ import {
   Eye,
   Fingerprint,
   History,
+  LayoutDashboard,
   LogOut,
   Menu,
   Search,
@@ -25,7 +26,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useLiveClock } from "@/hooks/useLiveClock";
-import { isAdminRole } from "@/lib/role";
+import { isAdminRole, isNasabahRole } from "@/lib/role";
 
 type MenuKey = "search" | "clock" | "notif" | "profile";
 
@@ -38,7 +39,7 @@ interface NotificationItem {
   color: string;
 }
 
-const NOTIFICATIONS: NotificationItem[] = [
+const TELLER_NOTIFICATIONS: NotificationItem[] = [
   {
     id: "n1",
     title: "Setoran baru diterima",
@@ -65,6 +66,33 @@ const NOTIFICATIONS: NotificationItem[] = [
   },
 ];
 
+const NASABAH_NOTIFICATIONS: NotificationItem[] = [
+  {
+    id: "n1",
+    title: "Setoran berhasil diterima",
+    description: "Saldo rekening Anda bertambah Rp 500.000",
+    time: "5 menit lalu",
+    icon: Wallet,
+    color: "#22c55e",
+  },
+  {
+    id: "n2",
+    title: "Login baru terdeteksi",
+    description: "Akun Anda login dari perangkat ini",
+    time: "1 jam lalu",
+    icon: ShieldCheck,
+    color: "#1120f0",
+  },
+  {
+    id: "n3",
+    title: "Pengingat data profil",
+    description: "Pastikan nomor telepon Anda masih aktif",
+    time: "3 jam lalu",
+    icon: UserCircle2,
+    color: "#ea580c",
+  },
+];
+
 const TELLER_QUICK_LINKS = [
   { label: "Cari Nasabah", href: "/nasabah", icon: Users, color: "#1120f0" },
   { label: "Setor Tunai", href: "/transaksi/setor", icon: Wallet, color: "#22c55e" },
@@ -75,6 +103,12 @@ const ADMIN_QUICK_LINKS = [
   { label: "Cari Nasabah", href: "/admin/nasabah", icon: Users, color: "#1120f0" },
   { label: "Pantau Transaksi", href: "/admin/transaksi", icon: Eye, color: "#22c55e" },
   { label: "Mutasi Rekening", href: "/admin/mutasi", icon: History, color: "#ea580c" },
+];
+
+const NASABAH_QUICK_LINKS = [
+  { label: "Beranda", href: "/portal/beranda", icon: LayoutDashboard, color: "#1120f0" },
+  { label: "Riwayat Transaksi", href: "/portal/riwayat", icon: History, color: "#22c55e" },
+  { label: "Profil Saya", href: "/portal/profil", icon: UserCircle2, color: "#ea580c" },
 ];
 
 const ROLE_LABEL: Record<string, string> = {
@@ -97,7 +131,12 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
-  const QUICK_LINKS = isAdminRole(user) ? ADMIN_QUICK_LINKS : TELLER_QUICK_LINKS;
+  const QUICK_LINKS = isNasabahRole(user)
+    ? NASABAH_QUICK_LINKS
+    : isAdminRole(user)
+      ? ADMIN_QUICK_LINKS
+      : TELLER_QUICK_LINKS;
+  const NOTIFICATIONS = isNasabahRole(user) ? NASABAH_NOTIFICATIONS : TELLER_NOTIFICATIONS;
   const now = useLiveClock();
   const [query, setQuery] = useState("");
   const [openMenu, setOpenMenu] = useState<MenuKey | null>(null);
@@ -122,7 +161,11 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (!query.trim()) return;
-    const base = isAdminRole(user) ? "/admin/nasabah" : "/nasabah";
+    const base = isNasabahRole(user)
+      ? "/portal/riwayat"
+      : isAdminRole(user)
+        ? "/admin/nasabah"
+        : "/nasabah";
     router.push(`${base}?search=${encodeURIComponent(query.trim())}`);
     setOpenMenu(null);
   }
@@ -182,7 +225,7 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cari nasabah, transaksi..."
+            placeholder={isNasabahRole(user) ? "Cari riwayat transaksi..." : "Cari nasabah, transaksi..."}
             className="w-full bg-transparent text-sm text-text-secondary placeholder:text-text-muted focus:outline-none"
           />
         </form>
@@ -214,7 +257,9 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
                 </Link>
               ))}
               <p className="mt-2 border-t border-border px-1 pt-2 text-[11px] text-text-muted">
-                Tekan Enter untuk mencari nasabah &quot;{query || "..."}&quot;
+                {isNasabahRole(user)
+                  ? `Tekan Enter untuk mencari riwayat "${query || "..."}"`
+                  : `Tekan Enter untuk mencari nasabah "${query || "..."}"`}
               </p>
             </motion.div>
           )}

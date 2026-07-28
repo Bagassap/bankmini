@@ -35,6 +35,9 @@ export interface Nasabah {
   tanggalLahir?: string | null;
   saldo: string | number;
   status: StatusNasabah;
+  username?: string | null;
+  isActive: boolean;
+  lastLogin?: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -16,11 +16,12 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Search,
+  User,
   Users,
   type LucideIcon,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
-import { isAdminRole } from "@/lib/role";
+import { isAdminRole, isNasabahRole } from "@/lib/role";
 import logo from "@/assets/logo bank-mini2.png";
 import logoMark from "@/assets/logo-mark.png";
 
@@ -80,10 +81,24 @@ const ADMIN_MENU_GROUPS: MenuGroup[] = [
   },
 ];
 
+const NASABAH_MENU_GROUPS: MenuGroup[] = [
+  {
+    label: "Menu Utama",
+    items: [
+      { label: "Beranda", href: "/portal/beranda", icon: LayoutDashboard },
+      { label: "Riwayat", href: "/portal/riwayat", icon: History },
+      { label: "Profil", href: "/portal/profil", icon: User },
+    ],
+  },
+];
+
 const ROLE_LABEL: Record<string, string> = {
   superadmin: "Superadmin",
   admin: "Admin",
   teller: "Teller",
+  siswa: "Siswa",
+  guru: "Guru",
+  umum: "Umum",
 };
 
 interface SidebarProps {
@@ -104,7 +119,11 @@ export default function Sidebar({
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
 
-  const menuGroups = isAdminRole(user) ? ADMIN_MENU_GROUPS : TELLER_MENU_GROUPS;
+  const menuGroups = isNasabahRole(user)
+    ? NASABAH_MENU_GROUPS
+    : isAdminRole(user)
+      ? ADMIN_MENU_GROUPS
+      : TELLER_MENU_GROUPS;
 
   const [activeMenu, setActiveMenu] = useState("Dashboard");
 

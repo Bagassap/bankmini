@@ -7,3 +7,7 @@ export function isTellerRole(user: User | null): boolean {
 export function isAdminRole(user: User | null): boolean {
   return user?.role === "admin" || user?.role === "superadmin";
 }
+
+export function isNasabahRole(user: User | null): boolean {
+  return user?.accountType === "nasabah";
+}
