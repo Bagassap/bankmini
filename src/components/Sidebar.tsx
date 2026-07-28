@@ -85,7 +85,7 @@ const NASABAH_MENU_GROUPS: MenuGroup[] = [
   {
     label: "Menu Utama",
     items: [
-      { label: "Beranda", href: "/portal/beranda", icon: LayoutDashboard },
+      { label: "Dashboard", href: "/portal/dashboard", icon: LayoutDashboard },
       { label: "Riwayat", href: "/portal/riwayat", icon: History },
       { label: "Profil", href: "/portal/profil", icon: User },
     ],

@@ -55,7 +55,7 @@ export default function LoginPage() {
       toast.success(`Selamat datang, ${data.user.nama}`);
       const destination =
         data.accountType === "nasabah"
-          ? "/portal/beranda"
+          ? "/portal/dashboard"
           : isAdminRole(user)
             ? "/admin/dashboard"
             : "/dashboard";

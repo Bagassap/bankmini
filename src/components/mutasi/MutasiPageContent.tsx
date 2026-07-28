@@ -23,6 +23,7 @@ import {
   X,
 } from "lucide-react";
 import Layout from "@/components/Layout";
+import { RatioRing } from "@/components/RatioRing";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -124,36 +125,6 @@ const rowVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.25 } },
 };
 
-function RatioRing({ percent }: { percent: number }) {
-  const size = 96;
-  const radius = (size - 10) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (percent / 100) * circumference;
-  return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} stroke="#e5e7eb" strokeWidth={8} fill="none" />
-        <motion.circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="#22c55e"
-          strokeWidth={8}
-          fill="none"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <p className="text-lg font-bold text-text-primary">{percent}%</p>
-        <p className="text-[9px] font-semibold tracking-wide text-text-muted uppercase">Setor</p>
-      </div>
-    </div>
-  );
-}
 
 export function MutasiPageContent() {
   const noRekeningRef = useRef<HTMLInputElement>(null);

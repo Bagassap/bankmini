@@ -106,7 +106,7 @@ const ADMIN_QUICK_LINKS = [
 ];
 
 const NASABAH_QUICK_LINKS = [
-  { label: "Beranda", href: "/portal/beranda", icon: LayoutDashboard, color: "#1120f0" },
+  { label: "Dashboard", href: "/portal/dashboard", icon: LayoutDashboard, color: "#1120f0" },
   { label: "Riwayat Transaksi", href: "/portal/riwayat", icon: History, color: "#22c55e" },
   { label: "Profil Saya", href: "/portal/profil", icon: UserCircle2, color: "#ea580c" },
 ];

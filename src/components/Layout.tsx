@@ -29,7 +29,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     if (!user) return;
     if (isNasabahRole(user)) {
       if (!pathname.startsWith("/portal")) {
-        router.replace("/portal/beranda");
+        router.replace("/portal/dashboard");
       }
       return;
     }

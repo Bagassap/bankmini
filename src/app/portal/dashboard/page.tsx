@@ -9,17 +9,20 @@ import {
   ArrowRight,
   ArrowUpFromLine,
   Calendar,
+  CalendarHeart,
   ClipboardList,
   History,
+  PieChart,
   RefreshCw,
   ShieldCheck,
   Sparkles,
+  TrendingUp,
   UserCog,
   Wallet,
 } from "lucide-react";
 import Layout from "@/components/Layout";
 import { AnimatedCurrency } from "@/components/dashboard/AnimatedCurrency";
-import { GradientStatCard } from "@/components/dashboard/GradientStatCard";
+import { RatioRing } from "@/components/RatioRing";
 import { useLiveClock } from "@/hooks/useLiveClock";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
@@ -33,7 +36,21 @@ const JENIS_LABEL: Record<JenisNasabah, string> = {
   umum: "Umum",
 };
 
-export default function BerandaPage() {
+const gridVariants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.1 } },
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] as const },
+  },
+};
+
+export default function PortalDashboardPage() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const [profile, setProfile] = useState<Nasabah | null>(null);
@@ -70,10 +87,15 @@ export default function BerandaPage() {
   const stats = useMemo(() => {
     const setorList = mutasi.filter((t) => t.jenisTransaksi === "setor");
     const tarikList = mutasi.filter((t) => t.jenisTransaksi === "tarik");
+    const totalSetor = setorList.reduce((sum, t) => sum + Number(t.jumlah), 0);
+    const totalTarik = tarikList.reduce((sum, t) => sum + Number(t.jumlah), 0);
+    const totalVolume = totalSetor + totalTarik;
     return {
-      totalSetor: setorList.reduce((sum, t) => sum + Number(t.jumlah), 0),
-      totalTarik: tarikList.reduce((sum, t) => sum + Number(t.jumlah), 0),
+      totalSetor,
+      totalTarik,
       totalTransaksi: mutasi.length,
+      setorShare: totalVolume > 0 ? Math.round((totalSetor / totalVolume) * 100) : 0,
+      rataRata: mutasi.length > 0 ? totalVolume / mutasi.length : 0,
     };
   }, [mutasi]);
 
@@ -97,6 +119,12 @@ export default function BerandaPage() {
   const initials = (user?.nama ?? "?").slice(0, 2).toUpperCase();
   const lastUpdatedLabel = lastUpdated
     ? lastUpdated.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
+    : "—";
+  const memberSince = profile
+    ? new Date(profile.createdAt).toLocaleDateString("id-ID", {
+        month: "long",
+        year: "numeric",
+      })
     : "—";
 
   return (
@@ -239,39 +267,116 @@ export default function BerandaPage() {
             </div>
           </motion.div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 md:gap-6 2xl:gap-7.5">
-            <GradientStatCard
-              tone="green"
-              label="Total Setoran"
-              value={stats.totalSetor}
-              caption="Sepanjang waktu"
-              icon={ArrowDownToLine}
-            />
-            <GradientStatCard
-              tone="orange"
-              label="Total Penarikan"
-              value={stats.totalTarik}
-              caption="Sepanjang waktu"
-              icon={ArrowUpFromLine}
-            />
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={gridVariants}
+            className="grid grid-cols-1 gap-4 md:gap-6 2xl:gap-7.5 lg:grid-cols-3"
+          >
             <motion.div
-              variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } } }}
+              variants={cardVariants}
               whileHover={{ y: -4 }}
-              className="relative overflow-hidden rounded-3xl bg-linear-to-br from-primary to-primary-dark p-6 text-white shadow-soft transition-shadow hover:shadow-lg"
+              className="relative overflow-hidden rounded-3xl bg-background-card p-6 shadow-soft transition-shadow hover:shadow-lg lg:col-span-2"
             >
               <div
                 aria-hidden
-                className="pointer-events-none absolute inset-0 opacity-20 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_1px,transparent_1px)] bg-size-[16px_16px]"
+                className="pointer-events-none absolute inset-0 opacity-[0.03] bg-[radial-gradient(circle,rgba(17,32,240,0.9)_1px,transparent_1px)] bg-size-[16px_16px]"
               />
-              <div className="pointer-events-none absolute -top-8 -right-8 h-28 w-28 rounded-full bg-white/10 blur-2xl" />
-              <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
-                <ClipboardList size={18} />
-              </span>
-              <p className="relative mt-5 text-sm font-medium text-white/85">Jumlah Transaksi</p>
-              <p className="relative mt-1 text-2xl font-bold">{stats.totalTransaksi}</p>
-              <p className="relative mt-1 text-xs text-white/70">Tercatat di rekening Anda</p>
+              <div className="relative mb-5 flex items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <PieChart size={18} />
+                </span>
+                <div>
+                  <p className="text-sm font-bold text-text-primary">Arus Kas Rekening</p>
+                  <p className="text-xs text-text-secondary">
+                    Perbandingan setoran &amp; penarikan sepanjang waktu
+                  </p>
+                </div>
+              </div>
+
+              <div className="relative flex flex-col items-center gap-6 sm:flex-row">
+                <RatioRing percent={stats.setorShare} color="#1120f0" />
+                <div className="flex w-full flex-1 flex-col gap-3">
+                  <div className="flex items-center gap-3 rounded-2xl bg-success/10 p-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
+                      <ArrowDownToLine size={16} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-text-secondary">Total Setoran</p>
+                      <p className="truncate text-base font-bold text-text-primary">
+                        {formatCurrency(stats.totalSetor)}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-success/15 px-2 py-0.5 text-[11px] font-bold text-success">
+                      {stats.setorShare}%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-2xl bg-danger/10 p-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger/15 text-danger">
+                      <ArrowUpFromLine size={16} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-text-secondary">Total Penarikan</p>
+                      <p className="truncate text-base font-bold text-text-primary">
+                        {formatCurrency(stats.totalTarik)}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-danger/15 px-2 py-0.5 text-[11px] font-bold text-danger">
+                      {100 - stats.setorShare}%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-2xl border border-border px-3 py-2 text-xs text-text-secondary">
+                    <TrendingUp size={13} className="shrink-0 text-primary" />
+                    Rata-rata {formatCurrency(stats.rataRata)} per transaksi
+                  </div>
+                </div>
+              </div>
             </motion.div>
-          </div>
+
+            <div className="flex flex-col gap-4 md:gap-6">
+              <motion.div
+                variants={cardVariants}
+                whileHover={{ y: -4 }}
+                className="relative flex-1 overflow-hidden rounded-3xl bg-linear-to-br from-primary to-primary-dark p-6 text-white shadow-soft transition-shadow hover:shadow-lg"
+              >
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 opacity-20 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_1px,transparent_1px)] bg-size-[16px_16px]"
+                />
+                <div className="pointer-events-none absolute -top-8 -right-8 h-28 w-28 rounded-full bg-white/10 blur-2xl" />
+                <motion.span
+                  whileHover={{ scale: 1.1, rotate: 8 }}
+                  className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm"
+                >
+                  <ClipboardList size={18} />
+                </motion.span>
+                <p className="relative mt-5 text-sm font-medium text-white/85">Jumlah Transaksi</p>
+                <p className="relative mt-1 text-2xl font-bold">{stats.totalTransaksi}</p>
+                <p className="relative mt-1 text-xs text-white/70">Tercatat di rekening Anda</p>
+              </motion.div>
+
+              <motion.div
+                variants={cardVariants}
+                whileHover={{ y: -4 }}
+                className="relative flex-1 overflow-hidden rounded-3xl bg-linear-to-br from-gradient-orange-from to-gradient-orange-to p-6 text-white shadow-soft transition-shadow hover:shadow-lg"
+              >
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 opacity-20 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_1px,transparent_1px)] bg-size-[16px_16px]"
+                />
+                <div className="pointer-events-none absolute -top-8 -right-8 h-28 w-28 rounded-full bg-white/10 blur-2xl" />
+                <motion.span
+                  whileHover={{ scale: 1.1, rotate: 8 }}
+                  className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm"
+                >
+                  <CalendarHeart size={18} />
+                </motion.span>
+                <p className="relative mt-5 text-sm font-medium text-white/85">Nasabah Sejak</p>
+                <p className="relative mt-1 text-2xl font-bold">{memberSince}</p>
+                <p className="relative mt-1 text-xs text-white/70">Terima kasih telah menabung bersama kami</p>
+              </motion.div>
+            </div>
+          </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 12 }}
@@ -291,7 +396,12 @@ export default function BerandaPage() {
               </div>
             </div>
 
-            <div className="divide-y divide-border">
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06 } } }}
+              className="divide-y divide-border"
+            >
               {recent.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 px-5 py-12 text-center text-text-secondary">
                   <ClipboardList size={26} className="text-text-muted" />
@@ -301,8 +411,9 @@ export default function BerandaPage() {
                 recent.map((trx) => {
                   const isSetor = trx.jenisTransaksi === "setor";
                   return (
-                    <div
+                    <motion.div
                       key={trx.id}
+                      variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0, transition: { duration: 0.25 } } }}
                       className="flex items-center gap-3 p-4 transition-colors hover:bg-background-hover"
                     >
                       <span
@@ -324,11 +435,11 @@ export default function BerandaPage() {
                         {isSetor ? "+ " : "- "}
                         {formatCurrency(trx.jumlah)}
                       </p>
-                    </div>
+                    </motion.div>
                   );
                 })
               )}
-            </div>
+            </motion.div>
 
             <div className="p-4">
               <button
