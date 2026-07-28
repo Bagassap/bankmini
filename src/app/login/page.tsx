@@ -71,7 +71,7 @@ export default function LoginPage() {
     <div className="bg-dot-grid-dark relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-background p-4 sm:p-8">
       <div className="animate-glow-pulse pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-primary/20 blur-3xl" />
       <div
-        className="animate-glow-pulse pointer-events-none absolute -bottom-32 -right-20 h-112 w-md rounded-full bg-gradient-via/20 blur-3xl"
+        className="animate-glow-pulse pointer-events-none absolute -bottom-32 -right-20 h-112 w-md rounded-full bg-primary-dark/20 blur-3xl"
         style={{ animationDelay: "1.2s" }}
       />
 
@@ -85,7 +85,7 @@ export default function LoginPage() {
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
-          className="relative order-1 flex w-full flex-row items-center gap-3 overflow-hidden rounded-3xl bg-linear-to-br from-gradient-from via-gradient-via to-gradient-to p-4 lg:order-0 lg:min-h-140 lg:w-[40%] lg:flex-col lg:items-center lg:justify-center lg:gap-8 lg:p-8"
+          className="relative order-1 flex w-full flex-row items-center gap-3 overflow-hidden rounded-3xl bg-linear-to-br from-primary-light via-primary to-primary-dark p-4 lg:order-0 lg:min-h-140 lg:w-[40%] lg:flex-col lg:items-center lg:justify-center lg:gap-8 lg:p-8"
         >
           <div className="bg-dot-grid pointer-events-none absolute inset-0 opacity-40" />
           <div className="hidden lg:block">
@@ -252,7 +252,7 @@ export default function LoginPage() {
               whileHover={{ scale: 1.01 }}
               type="submit"
               disabled={loading}
-              className="group relative flex w-full items-center justify-center overflow-hidden rounded-xl bg-linear-to-r from-primary to-gradient-via py-3.5 text-sm font-bold text-white shadow-lg shadow-primary/25 transition disabled:cursor-not-allowed disabled:opacity-60"
+              className="group relative flex w-full items-center justify-center overflow-hidden rounded-xl bg-linear-to-r from-primary to-primary-dark py-3.5 text-sm font-bold text-white shadow-lg shadow-primary/25 transition disabled:cursor-not-allowed disabled:opacity-60"
             >
               <span className="animate-shine absolute inset-y-0 left-0 w-1/3 bg-linear-to-r from-transparent via-white/30 to-transparent" />
               <span className="relative flex items-center gap-2">

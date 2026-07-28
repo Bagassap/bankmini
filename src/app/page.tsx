@@ -48,7 +48,7 @@ export default function Home() {
         filter: leaving ? "blur(10px)" : "blur(0px)",
       }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-linear-to-br from-gradient-from via-gradient-via to-gradient-to"
+      className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-linear-to-br from-primary-light via-primary to-primary-dark"
     >
       <div className="relative z-10 flex flex-col items-center px-6 text-center">
         <motion.div
