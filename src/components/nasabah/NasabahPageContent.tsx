@@ -21,6 +21,7 @@ import {
   MapPin,
   Pencil,
   Phone,
+  School,
   Search,
   ShieldCheck,
   Sparkles,
@@ -54,6 +55,7 @@ interface AddForm {
   nip: string;
   jabatan: string;
   alamat: string;
+  tahunAngkatan: string;
   noTelepon: string;
   jenisKelamin: JenisKelamin | "";
   tanggalLahir: string;
@@ -68,6 +70,7 @@ const initialAddForm: AddForm = {
   nip: "",
   jabatan: "",
   alamat: "",
+  tahunAngkatan: "",
   noTelepon: "",
   jenisKelamin: "",
   tanggalLahir: "",
@@ -82,6 +85,7 @@ interface EditForm {
   nip: string;
   jabatan: string;
   alamat: string;
+  tahunAngkatan: string;
   noTelepon: string;
   jenisKelamin: JenisKelamin | "";
   status: StatusNasabah;
@@ -97,6 +101,7 @@ function toEditForm(nasabah: Nasabah): EditForm {
     nip: nasabah.nip ?? "",
     jabatan: nasabah.jabatan ?? "",
     alamat: nasabah.alamat ?? "",
+    tahunAngkatan: nasabah.tahunAngkatan ?? "",
     noTelepon: nasabah.noTelepon ?? "",
     jenisKelamin: nasabah.jenisKelamin ?? "",
     status: nasabah.status,
@@ -107,18 +112,21 @@ const jenisLabel: Record<JenisNasabah, string> = {
   siswa: "Siswa",
   guru: "Guru",
   umum: "Umum",
+  kelas: "Kelas",
 };
 
 const JENIS_COLOR: Record<JenisNasabah, string> = {
   siswa: "#1120f0",
   guru: "#f59e0b",
   umum: "#10b981",
+  kelas: "#8b5cf6",
 };
 
 const JENIS_ICON: Record<JenisNasabah, typeof GraduationCap> = {
   siswa: GraduationCap,
   guru: BookUser,
   umum: Users,
+  kelas: School,
 };
 
 const HEALTH_TIER_META: Record<
@@ -171,8 +179,9 @@ const rowVariants = {
 type Tab = "sekolah" | "umum";
 
 function completeness(n: Nasabah): number {
+  const isKelas = n.jenisNasabah === "kelas";
   const fields: (string | null | undefined)[] = [
-    n.alamat,
+    isKelas ? n.tahunAngkatan : n.alamat,
     n.noTelepon,
     n.jenisKelamin,
     n.tanggalLahir,
@@ -184,8 +193,11 @@ function completeness(n: Nasabah): number {
 }
 
 function missingFields(n: Nasabah): { key: string; label: string }[] {
+  const isKelas = n.jenisNasabah === "kelas";
   const base: { key: string; label: string; value: string | null | undefined }[] = [
-    { key: "alamat", label: "Alamat", value: n.alamat },
+    isKelas
+      ? { key: "tahunAngkatan", label: "Tahun Angkatan", value: n.tahunAngkatan }
+      : { key: "alamat", label: "Alamat", value: n.alamat },
     { key: "noTelepon", label: "No Telepon", value: n.noTelepon },
     { key: "jenisKelamin", label: "Jenis Kelamin", value: n.jenisKelamin },
     { key: "tanggalLahir", label: "Tanggal Lahir", value: n.tanggalLahir },
@@ -336,7 +348,7 @@ export function NasabahPageContent() {
     const initialSearch = params.get("search");
     if (initialSearch) setSearch(initialSearch);
     const initialJenis = params.get("jenis");
-    if (initialJenis === "siswa" || initialJenis === "guru") {
+    if (initialJenis === "siswa" || initialJenis === "guru" || initialJenis === "kelas") {
       setActiveTab("sekolah");
       setJenisFilter(initialJenis);
     } else if (initialJenis === "umum") {
@@ -503,7 +515,9 @@ export function NasabahPageContent() {
         nip: addForm.jenisNasabah === "guru" ? addForm.nip || undefined : undefined,
         jabatan:
           addForm.jenisNasabah === "guru" ? addForm.jabatan || undefined : undefined,
-        alamat: addForm.alamat || undefined,
+        alamat: addForm.jenisNasabah === "kelas" ? undefined : addForm.alamat || undefined,
+        tahunAngkatan:
+          addForm.jenisNasabah === "kelas" ? addForm.tahunAngkatan || undefined : undefined,
         noTelepon: addForm.noTelepon || undefined,
         jenisKelamin: addForm.jenisKelamin || undefined,
         tanggalLahir: addForm.tanggalLahir || undefined,
@@ -533,7 +547,9 @@ export function NasabahPageContent() {
         nip: editForm.jenisNasabah === "guru" ? editForm.nip : undefined,
         jabatan:
           editForm.jenisNasabah === "guru" ? editForm.jabatan : undefined,
-        alamat: editForm.alamat,
+        alamat: editForm.jenisNasabah === "kelas" ? undefined : editForm.alamat,
+        tahunAngkatan:
+          editForm.jenisNasabah === "kelas" ? editForm.tahunAngkatan : undefined,
         noTelepon: editForm.noTelepon,
         jenisKelamin: editForm.jenisKelamin || undefined,
         status: editForm.status,
@@ -744,6 +760,7 @@ export function NasabahPageContent() {
                   { value: "" as const, label: "Semua", icon: Users },
                   { value: "siswa" as const, label: "Siswa", icon: GraduationCap },
                   { value: "guru" as const, label: "Guru", icon: BookUser },
+                  { value: "kelas" as const, label: "Kelas", icon: School },
                 ]
               ).map((opt) => {
                 const active = jenisFilter === opt.value;
@@ -1411,6 +1428,7 @@ export function NasabahPageContent() {
                     >
                       <option value="siswa">Siswa</option>
                       <option value="guru">Guru</option>
+                      <option value="kelas">Kelas</option>
                       <option value="umum">Umum</option>
                     </select>
                   </div>
@@ -1527,15 +1545,32 @@ export function NasabahPageContent() {
                   </div>
 
                   <div>
-                    <FieldLabel icon={MapPin}>Alamat</FieldLabel>
-                    <input
-                      type="text"
-                      value={editForm.alamat}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, alamat: e.target.value })
-                      }
-                      className={inputClass}
-                    />
+                    {editForm.jenisNasabah === "kelas" ? (
+                      <>
+                        <FieldLabel icon={Calendar}>Tahun Angkatan</FieldLabel>
+                        <input
+                          type="text"
+                          value={editForm.tahunAngkatan}
+                          onChange={(e) =>
+                            setEditForm({ ...editForm, tahunAngkatan: e.target.value })
+                          }
+                          placeholder="Contoh: 2023/2024"
+                          className={inputClass}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <FieldLabel icon={MapPin}>Alamat</FieldLabel>
+                        <input
+                          type="text"
+                          value={editForm.alamat}
+                          onChange={(e) =>
+                            setEditForm({ ...editForm, alamat: e.target.value })
+                          }
+                          className={inputClass}
+                        />
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -1702,7 +1737,11 @@ export function NasabahPageContent() {
                               value={viewing.tanggalLahir ? formatDate(viewing.tanggalLahir) : "-"}
                             />
                             <ViewField icon={Phone} label="No Telepon" value={viewing.noTelepon ?? "-"} />
-                            <ViewField icon={MapPin} label="Alamat" value={viewing.alamat ?? "-"} className="col-span-2" />
+                            {viewing.jenisNasabah === "kelas" ? (
+                              <ViewField icon={Calendar} label="Tahun Angkatan" value={viewing.tahunAngkatan ?? "-"} className="col-span-2" />
+                            ) : (
+                              <ViewField icon={MapPin} label="Alamat" value={viewing.alamat ?? "-"} className="col-span-2" />
+                            )}
                           </div>
                         </motion.div>
                       </div>
@@ -1848,7 +1887,7 @@ export function NasabahPageContent() {
               <form onSubmit={handleAddSubmit} className="relative mt-4 flex flex-col gap-4">
                 <div>
                   <FieldLabel icon={Users}>Jenis Nasabah</FieldLabel>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {(
                       [
                         {
@@ -1864,6 +1903,13 @@ export function NasabahPageContent() {
                           desc: "Staff pengajar",
                           icon: BookUser,
                           color: JENIS_COLOR.guru,
+                        },
+                        {
+                          value: "kelas" as const,
+                          label: "Kelas",
+                          desc: "Kas kelas",
+                          icon: School,
+                          color: JENIS_COLOR.kelas,
                         },
                         {
                           value: "umum" as const,
@@ -2065,13 +2111,30 @@ export function NasabahPageContent() {
                     />
                   </div>
                   <div>
-                    <FieldLabel icon={MapPin}>Alamat</FieldLabel>
-                    <input
-                      type="text"
-                      value={addForm.alamat}
-                      onChange={(e) => setAddForm({ ...addForm, alamat: e.target.value })}
-                      className={inputClass}
-                    />
+                    {addForm.jenisNasabah === "kelas" ? (
+                      <>
+                        <FieldLabel icon={Calendar}>Tahun Angkatan</FieldLabel>
+                        <input
+                          type="text"
+                          value={addForm.tahunAngkatan}
+                          onChange={(e) =>
+                            setAddForm({ ...addForm, tahunAngkatan: e.target.value })
+                          }
+                          placeholder="Contoh: 2023/2024"
+                          className={inputClass}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <FieldLabel icon={MapPin}>Alamat</FieldLabel>
+                        <input
+                          type="text"
+                          value={addForm.alamat}
+                          onChange={(e) => setAddForm({ ...addForm, alamat: e.target.value })}
+                          className={inputClass}
+                        />
+                      </>
+                    )}
                   </div>
                 </div>
 

@@ -3,6 +3,7 @@ import {
   ArrowUpFromLine,
   BookUser,
   GraduationCap,
+  School,
   Sparkles,
   Tag,
   Users,
@@ -14,12 +15,14 @@ export const jenisLabel: Record<JenisNasabah, string> = {
   siswa: "Siswa",
   guru: "Guru",
   umum: "Umum",
+  kelas: "Kelas",
 };
 
 export const JENIS_ICON: Record<JenisNasabah, LucideIcon> = {
   siswa: GraduationCap,
   guru: BookUser,
   umum: Users,
+  kelas: School,
 };
 
 export const GUIDE_COLORS = ["#1120f0", "#22c55e", "#ea580c"];

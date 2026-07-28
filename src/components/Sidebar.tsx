@@ -156,7 +156,7 @@ export default function Sidebar({
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-screen shrink-0 flex-col bg-background transition-[width,transform] duration-300 ease-in-out md:static md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex h-screen shrink-0 flex-col bg-background transition-[width,transform] duration-300 ease-in-out md:static md:z-0 md:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         } ${collapsed ? "w-20 p-2" : "w-64 p-3"}`}
       >

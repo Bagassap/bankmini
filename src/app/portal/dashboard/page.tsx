@@ -35,6 +35,7 @@ const JENIS_LABEL: Record<JenisNasabah, string> = {
   siswa: "Siswa",
   guru: "Guru",
   umum: "Umum",
+  kelas: "Kelas",
 };
 
 const gridVariants = {

@@ -1,6 +1,6 @@
 export type Role = "superadmin" | "admin" | "teller";
 
-export type JenisNasabah = "siswa" | "guru" | "umum";
+export type JenisNasabah = "siswa" | "guru" | "umum" | "kelas";
 
 export type JenisKelamin = "L" | "P";
 
@@ -30,6 +30,7 @@ export interface Nasabah {
   nip?: string | null;
   jabatan?: string | null;
   alamat?: string | null;
+  tahunAngkatan?: string | null;
   noTelepon?: string | null;
   jenisKelamin?: JenisKelamin | null;
   tanggalLahir?: string | null;

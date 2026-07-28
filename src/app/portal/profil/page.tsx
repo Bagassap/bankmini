@@ -20,6 +20,7 @@ import {
   Lock,
   Phone,
   Save,
+  School,
   ShieldAlert,
   ShieldCheck,
   ShieldQuestion,
@@ -40,12 +41,14 @@ const JENIS_LABEL: Record<JenisNasabah, string> = {
   siswa: "Siswa",
   guru: "Guru",
   umum: "Umum",
+  kelas: "Kelas",
 };
 
 const JENIS_ICON: Record<JenisNasabah, typeof GraduationCap> = {
   siswa: GraduationCap,
   guru: BookUser,
   umum: Users,
+  kelas: School,
 };
 
 const inputClass =

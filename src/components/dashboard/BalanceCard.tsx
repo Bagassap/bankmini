@@ -11,6 +11,7 @@ import {
   History,
   Plus,
   RefreshCw,
+  School,
   TrendingDown,
   TrendingUp,
   Users,
@@ -25,18 +26,21 @@ const JENIS_COLOR: Record<JenisNasabah, string> = {
   siswa: "#1120f0",
   guru: "#f59e0b",
   umum: "#10b981",
+  kelas: "#8b5cf6",
 };
 
 const JENIS_LABEL: Record<JenisNasabah, string> = {
   siswa: "Siswa",
   guru: "Guru",
   umum: "Umum",
+  kelas: "Kelas",
 };
 
 const JENIS_ICON: Record<JenisNasabah, typeof GraduationCap> = {
   siswa: GraduationCap,
   guru: BookUser,
   umum: Users,
+  kelas: School,
 };
 
 const statRowVariants = {
