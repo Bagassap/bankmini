@@ -13,6 +13,8 @@ import { JenisNasabah, StatusNasabah } from '../generated/prisma/client';
 import { NasabahService, SafeNasabah } from './nasabah.service';
 import { CreateNasabahDto } from './dto/create-nasabah.dto';
 import { UpdateNasabahDto } from './dto/update-nasabah.dto';
+import { UpdateOwnProfileDto } from './dto/update-own-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { StaffOnlyGuard } from '../auth/staff-only.guard';
 import { NasabahOnlyGuard } from '../auth/nasabah-only.guard';
@@ -34,6 +36,29 @@ export class NasabahController {
   @UseGuards(NasabahOnlyGuard)
   getMe(@CurrentUser() user: JwtPayload): Promise<SafeNasabah> {
     return this.nasabahService.findById(user.id);
+  }
+
+  @Patch('me')
+  @UseGuards(NasabahOnlyGuard)
+  updateMe(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: UpdateOwnProfileDto,
+  ): Promise<SafeNasabah> {
+    return this.nasabahService.update(user.id, dto);
+  }
+
+  @Patch('me/password')
+  @UseGuards(NasabahOnlyGuard)
+  async changePassword(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: ChangePasswordDto,
+  ): Promise<{ message: string }> {
+    await this.nasabahService.changePassword(
+      user.id,
+      dto.currentPassword,
+      dto.newPassword,
+    );
+    return { message: 'Password berhasil diubah' };
   }
 
   @Get('no-rekening/:noRekening')

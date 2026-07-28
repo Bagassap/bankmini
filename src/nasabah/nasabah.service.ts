@@ -239,6 +239,31 @@ export class NasabahService {
     }
   }
 
+  async changePassword(
+    id: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    try {
+      const nasabah = await this.prisma.nasabah.findUnique({ where: { id } });
+      if (!nasabah || !nasabah.password) {
+        throw new NotFoundException('Akun tidak ditemukan');
+      }
+      const isValid = await bcrypt.compare(currentPassword, nasabah.password);
+      if (!isValid) {
+        throw new BadRequestException('Password saat ini salah');
+      }
+      const hashed = await bcrypt.hash(newPassword, 10);
+      await this.prisma.nasabah.update({
+        where: { id },
+        data: { password: hashed },
+      });
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException('Gagal mengubah password');
+    }
+  }
+
   async delete(id: string): Promise<SafeNasabah> {
     try {
       const nasabah = await this.findById(id);
