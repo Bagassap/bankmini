@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
-import { getUser, isLoggedIn } from "@/lib/auth";
+import { useAuthStore } from "@/store/authStore";
 import logo from "@/assets/logo bank-mini1.png";
 
 const REDIRECT_DELAY_MS = 3600;
@@ -13,10 +13,14 @@ const TITLE = "Bank Mini NUSA";
 const TAGLINE = "Sahabat keuangan digital untuk siswa, guru, dan sekolah.";
 const TAGLINE_WORDS = TAGLINE.split(" ");
 
-function resolveDestination(): string {
-  if (!isLoggedIn()) return "/login";
-  const user = getUser();
-  return user?.accountType === "nasabah" ? "/portal" : "/dashboard";
+// Asks the server whether the session cookie is still valid rather than
+// trusting anything cached client-side - this is also what makes a closed
+// (and reopened) browser land back on /login once the session has expired.
+async function resolveDestination(): Promise<string> {
+  await useAuthStore.getState().hydrate();
+  const { status, user } = useAuthStore.getState();
+  if (status !== "authenticated" || !user) return "/login";
+  return user.accountType === "nasabah" ? "/portal" : "/dashboard";
 }
 
 export default function Home() {
@@ -27,7 +31,7 @@ export default function Home() {
     const timer = setTimeout(() => {
       setLeaving(true);
       setTimeout(() => {
-        router.replace(resolveDestination());
+        resolveDestination().then((dest) => router.replace(dest));
       }, 500);
     }, REDIRECT_DELAY_MS);
     return () => clearTimeout(timer);
@@ -36,7 +40,7 @@ export default function Home() {
   function handleSkip() {
     setLeaving(true);
     setTimeout(() => {
-      router.replace(resolveDestination());
+      resolveDestination().then((dest) => router.replace(dest));
     }, 350);
   }
 

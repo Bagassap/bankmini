@@ -51,7 +51,7 @@ export default function LoginPage() {
         password,
       });
       const user = { ...data.user, accountType: data.accountType };
-      login(user, data.accessToken);
+      login(user);
       toast.success(`Selamat datang, ${data.user.nama}`);
       const destination =
         data.accountType === "nasabah"

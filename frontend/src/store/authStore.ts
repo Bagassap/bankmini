@@ -1,28 +1,39 @@
 import { create } from "zustand";
 import type { User } from "../lib/types";
-import { getToken, getUser, removeToken, setToken, setUser } from "../lib/auth";
+import api from "../lib/api";
+
+export type AuthStatus = "idle" | "loading" | "authenticated" | "unauthenticated";
 
 interface AuthState {
   user: User | null;
-  token: string | null;
-  login: (user: User, token: string) => void;
+  status: AuthStatus;
+  login: (user: User) => void;
   logout: () => void;
-  hydrate: () => void;
+  hydrate: () => Promise<void>;
 }
 
+// Auth is backed entirely by the httpOnly session cookie the backend sets
+// on login (see backend/src/auth/auth.controller.ts) - there is no token to
+// persist client-side. hydrate() asks the server whether the current
+// cookie/session is still valid, which also doubles as the "was the
+// browser closed and the session dropped?" check on every page load.
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  token: null,
-  login: (user, token) => {
-    setToken(token);
-    setUser(user);
-    set({ user, token });
-  },
+  status: "idle",
+  login: (user) => set({ user, status: "authenticated" }),
   logout: () => {
-    removeToken();
-    set({ user: null, token: null });
+    set({ user: null, status: "unauthenticated" });
+    api.post("/auth/logout").catch(() => {
+      // best-effort: cookie is already cleared client-side either way
+    });
   },
-  hydrate: () => {
-    set({ user: getUser(), token: getToken() });
+  hydrate: async () => {
+    set({ status: "loading" });
+    try {
+      const { data } = await api.get<User>("/auth/me");
+      set({ user: data, status: "authenticated" });
+    } catch {
+      set({ user: null, status: "unauthenticated" });
+    }
   },
 }));

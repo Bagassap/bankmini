@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { isLoggedIn } from "@/lib/auth";
+import { Loader2 } from "lucide-react";
 import { isAdminRole, isNasabahRole, isTellerRole } from "@/lib/role";
 import { useAuthStore } from "@/store/authStore";
 import { useUIStore } from "@/store/uiStore";
@@ -13,6 +13,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname() ?? "/";
   const hydrate = useAuthStore((state) => state.hydrate);
+  const status = useAuthStore((state) => state.status);
   const user = useAuthStore((state) => state.user);
   const [mobileOpen, setMobileOpen] = useState(false);
   const collapsed = useUIStore((state) => state.sidebarCollapsed);
@@ -20,10 +21,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     hydrate();
-    if (!isLoggedIn()) {
+  }, [hydrate]);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
       router.replace("/login");
     }
-  }, [hydrate, router]);
+  }, [status, router]);
 
   useEffect(() => {
     if (!user) return;
@@ -40,6 +44,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       router.replace("/dashboard");
     }
   }, [user, pathname, router]);
+
+  if (status === "idle" || status === "loading") {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <Loader2 size={28} className="animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return null;
+  }
 
   return (
     <div className="flex h-screen bg-background">
