@@ -1,0 +1,204 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f4f6fb;
+  --foreground: #0f1729;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-satoshi);
+
+  /* Primary color system — sumber tunggal warna untuk seluruh app (light theme) */
+  --color-background-card: #ffffff;
+  --color-background-hover: #f1f5f9;
+
+  --color-primary: #1120f0;
+  --color-primary-dark: #0d1ac0;
+  --color-primary-light: #4c56f5;
+
+  --color-gradient-from: #7c3aed;
+  --color-gradient-via: #4f46e5;
+  --color-gradient-to: #3b82f6;
+
+  --color-success: #10b981;
+  --color-danger: #f87171;
+  --color-warning: #fbbf24;
+  --color-info: #a78bfa;
+
+  --color-gradient-green-from: #4ade80;
+  --color-gradient-green-to: #22c55e;
+  --color-gradient-blue-from: #60a5fa;
+  --color-gradient-blue-to: #3b82f6;
+  --color-gradient-purple-from: #a78bfa;
+  --color-gradient-purple-to: #7c3aed;
+  --color-gradient-orange-from: #fb923c;
+  --color-gradient-orange-to: #ea580c;
+
+  --color-chart-primary: #1120f0;
+  --color-chart-secondary: #f59e0b;
+  --color-chart-track: #e5e7eb;
+
+  --color-text-primary: #0f1729;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94a3b8;
+
+  --color-border: #e2e8f0;
+
+  --shadow-soft: 0 4px 20px -2px rgba(15, 23, 41, 0.08);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Sembunyikan TAMPILAN scrollbar pada area scroll internal (konten dashboard,
+   daftar menu sidebar) — scroll via mouse wheel/trackpad/keyboard tetap
+   berfungsi normal, cuma bar visualnya yang tidak ditampilkan. */
+main,
+nav {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Edge/IE lama */
+}
+main::-webkit-scrollbar,
+nav::-webkit-scrollbar {
+  display: none; /* Chrome, Edge, Safari */
+}
+
+/* Utility yang sama untuk area scroll lain (mis. isi modal) yang tetap perlu
+   bisa di-scroll di layar pendek, tapi tanpa menampilkan bar visualnya. */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(2%, -4%) scale(1.05);
+  }
+}
+
+@keyframes float-slower {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-3%, 3%) scale(0.95);
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 9s ease-in-out infinite;
+}
+
+.animate-float-slower {
+  animation: float-slower 12s ease-in-out infinite;
+}
+
+@keyframes drift-a {
+  0% {
+    transform: translate(-10%, -10%) scale(1);
+  }
+  33% {
+    transform: translate(20%, 10%) scale(1.15);
+  }
+  66% {
+    transform: translate(5%, 25%) scale(0.9);
+  }
+  100% {
+    transform: translate(-10%, -10%) scale(1);
+  }
+}
+
+@keyframes drift-b {
+  0% {
+    transform: translate(10%, 15%) scale(1.1);
+  }
+  50% {
+    transform: translate(-15%, -15%) scale(0.85);
+  }
+  100% {
+    transform: translate(10%, 15%) scale(1.1);
+  }
+}
+
+.animate-drift-a {
+  animation: drift-a 16s ease-in-out infinite;
+}
+
+.animate-drift-b {
+  animation: drift-b 20s ease-in-out infinite;
+}
+
+@keyframes gradient-x {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient-x {
+  background-size: 200% auto;
+  animation: gradient-x 6s ease-in-out infinite;
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-120%) skewX(-15deg);
+  }
+  100% {
+    transform: translateX(220%) skewX(-15deg);
+  }
+}
+
+.animate-shine {
+  animation: shine 2.8s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+.bg-dot-grid {
+  background-image: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.35) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+}
+
+.bg-dot-grid-dark {
+  background-image: radial-gradient(
+    circle,
+    rgba(79, 70, 229, 0.14) 1px,
+    transparent 1px
+  );
+  background-size: 24px 24px;
+}
