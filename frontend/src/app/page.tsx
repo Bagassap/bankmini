@@ -9,9 +9,8 @@ import { useAuthStore } from "@/store/authStore";
 import logo from "@/assets/logo bank-mini1.png";
 
 const REDIRECT_DELAY_MS = 3600;
-const TITLE = "Bank Mini NUSA";
-const TAGLINE = "Sahabat keuangan digital untuk siswa, guru, dan sekolah.";
-const TAGLINE_WORDS = TAGLINE.split(" ");
+const TITLE_LINE_1 = "Bank Mini";
+const TITLE_LINE_2 = "NUSA";
 
 // Asks the server whether the session cookie is still valid rather than
 // trusting anything cached client-side - this is also what makes a closed
@@ -82,37 +81,44 @@ export default function Home() {
           </span>
         </motion.div>
 
-        <h1 className="mt-6 flex flex-wrap justify-center text-4xl font-black tracking-tight text-white sm:text-6xl">
-          {TITLE.split("").map((char, i) => (
-            <motion.span
-              key={i}
-              initial={{ opacity: 0, y: 28, rotateX: -70 }}
-              animate={{ opacity: 1, y: 0, rotateX: 0 }}
-              transition={{
-                duration: 0.5,
-                delay: 0.7 + i * 0.03,
-                ease: [0.16, 1, 0.3, 1],
-              }}
-              className="inline-block"
-              style={{ transformOrigin: "bottom", perspective: 400 }}
-            >
-              {char === " " ? " " : char}
-            </motion.span>
-          ))}
+        <h1 className="mt-6 flex flex-col items-center justify-center text-center text-4xl font-black leading-tight tracking-tight text-white sm:text-6xl">
+          <div className="flex flex-wrap justify-center">
+            {TITLE_LINE_1.split("").map((char, i) => (
+              <motion.span
+                key={`line1-${i}`}
+                initial={{ opacity: 0, y: 28, rotateX: -70 }}
+                animate={{ opacity: 1, y: 0, rotateX: 0 }}
+                transition={{
+                  duration: 0.5,
+                  delay: 0.7 + i * 0.03,
+                  ease: [0.16, 1, 0.3, 1],
+                }}
+                className="inline-block"
+                style={{ transformOrigin: "bottom", perspective: 400 }}
+              >
+                {char === " " ? " " : char}
+              </motion.span>
+            ))}
+          </div>
+          <div className="flex flex-wrap justify-center">
+            {TITLE_LINE_2.split("").map((char, i) => (
+              <motion.span
+                key={`line2-${i}`}
+                initial={{ opacity: 0, y: 28, rotateX: -70 }}
+                animate={{ opacity: 1, y: 0, rotateX: 0 }}
+                transition={{
+                  duration: 0.5,
+                  delay: 0.7 + (TITLE_LINE_1.length + i) * 0.03,
+                  ease: [0.16, 1, 0.3, 1],
+                }}
+                className="inline-block"
+                style={{ transformOrigin: "bottom", perspective: 400 }}
+              >
+                {char}
+              </motion.span>
+            ))}
+          </div>
         </h1>
-
-        <p className="mt-5 flex max-w-lg flex-wrap justify-center gap-x-1.5 gap-y-1 text-base font-medium text-white/75 sm:text-lg">
-          {TAGLINE_WORDS.map((word, i) => (
-            <motion.span
-              key={i}
-              initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              transition={{ duration: 0.5, delay: 1.8 + i * 0.055 }}
-            >
-              {word}
-            </motion.span>
-          ))}
-        </p>
 
         <motion.div
           initial={{ opacity: 0 }}
