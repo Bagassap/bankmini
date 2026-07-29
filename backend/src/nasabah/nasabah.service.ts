@@ -64,7 +64,8 @@ export class NasabahService {
     noRekening: string,
   ): string | null {
     if (input.jenisNasabah === 'siswa') return input.nis || noRekening;
-    if (input.jenisNasabah === 'guru') return input.nip || noRekening;
+    if (input.jenisNasabah === 'guru' || input.jenisNasabah === 'wali_kelas')
+      return input.nip || noRekening;
     return null;
   }
 

@@ -20,6 +20,7 @@ enum JenisNasabah {
   guru
   umum
   kelas
+  wali_kelas
 }
 
 enum JenisKelamin {
@@ -35,6 +36,11 @@ enum StatusNasabah {
 enum JenisTransaksi {
   setor
   tarik
+}
+
+enum AccountType {
+  staff
+  nasabah
 }
 
 model User {
@@ -97,4 +103,16 @@ model Transaksi {
   createdAt      DateTime       @default(now())
 
   @@map("transaksi")
+}
+
+model Session {
+  id           String      @id @default(uuid())
+  accountType  AccountType
+  accountId    String
+  createdAt    DateTime    @default(now())
+  lastActiveAt DateTime    @default(now())
+  revokedAt    DateTime?
+
+  @@index([accountId])
+  @@map("sessions")
 }

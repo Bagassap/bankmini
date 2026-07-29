@@ -4,12 +4,13 @@ import {
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { NasabahService } from '../nasabah/nasabah.service';
-
-export type AuthAccountType = 'staff' | 'nasabah';
+import { PrismaService } from '../prisma/prisma.service';
+import type { AuthAccountType, JwtPayload } from './jwt-payload.interface';
 
 export interface LoginInput {
   username: string;
@@ -28,13 +29,25 @@ export interface LoginResult {
   };
 }
 
+const DEFAULT_IDLE_TIMEOUT_MINUTES = 30;
+
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly nasabahService: NasabahService,
     private readonly jwtService: JwtService,
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
   ) {}
+
+  private get idleTimeoutMs(): number {
+    const minutes = Number(
+      this.config.get('SESSION_IDLE_TIMEOUT_MINUTES') ??
+        DEFAULT_IDLE_TIMEOUT_MINUTES,
+    );
+    return minutes * 60 * 1000;
+  }
 
   async login(input: LoginInput): Promise<LoginResult> {
     try {
@@ -94,16 +107,71 @@ export class AuthService {
     }
   }
 
+  /**
+   * Revokes the session tied to the given access token, if any. Called on
+   * logout so the session is invalidated server-side rather than relying
+   * solely on the browser dropping its cookie. Silently no-ops on an
+   * invalid/expired/missing token so logout stays idempotent.
+   */
+  async logout(token?: string): Promise<void> {
+    if (!token) return;
+    try {
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
+      await this.prisma.session.updateMany({
+        where: { id: payload.sid, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    } catch {
+      // Invalid/expired token: nothing to revoke.
+    }
+  }
+
+  /**
+   * Validates that a session is still alive (not revoked, not idle beyond
+   * the configured timeout) and slides its expiry forward. Throws when the
+   * session should no longer be trusted, forcing the client to log in
+   * again even if it still holds an unexpired JWT.
+   */
+  async touchSession(sessionId: string): Promise<void> {
+    const session = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+    });
+    if (!session || session.revokedAt) {
+      throw new UnauthorizedException('Sesi tidak valid, silakan login kembali');
+    }
+
+    const idleFor = Date.now() - session.lastActiveAt.getTime();
+    if (idleFor > this.idleTimeoutMs) {
+      await this.prisma.session.update({
+        where: { id: sessionId },
+        data: { revokedAt: new Date() },
+      });
+      throw new UnauthorizedException(
+        'Sesi berakhir karena tidak aktif, silakan login kembali',
+      );
+    }
+
+    await this.prisma.session.update({
+      where: { id: sessionId },
+      data: { lastActiveAt: new Date() },
+    });
+  }
+
   private async buildResult(
     accountType: AuthAccountType,
     user: LoginResult['user'],
   ): Promise<LoginResult> {
-    const payload = {
+    const session = await this.prisma.session.create({
+      data: { accountType, accountId: user.id },
+    });
+
+    const payload: JwtPayload = {
       id: user.id,
       username: user.username,
       nama: user.nama,
       role: user.role,
       accountType,
+      sid: session.id,
     };
     const accessToken = await this.jwtService.signAsync(payload);
     return { accessToken, accountType, user };

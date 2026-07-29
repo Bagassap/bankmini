@@ -11,7 +11,6 @@ import {
 import { JenisTransaksi, Role } from '../generated/prisma/client';
 import { TransaksiService } from './transaksi.service';
 import { SetorTarikDto } from './dto/setor-tarik.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { StaffOnlyGuard } from '../auth/staff-only.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -19,7 +18,6 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import type { JwtPayload } from '../auth/jwt.strategy';
 
 @Controller('transaksi')
-@UseGuards(JwtAuthGuard)
 export class TransaksiController {
   constructor(private readonly transaksiService: TransaksiService) {}
 

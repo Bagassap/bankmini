@@ -149,7 +149,27 @@ async function main() {
     },
   });
 
-  const noRekeningUmumTest = buildNoRekening(6);
+  const noRekeningWaliKelasTest = buildNoRekening(6);
+  await prisma.nasabah.upsert({
+    where: { username: '171717' },
+    update: { password: await bcrypt.hash('walikelas123', 10) },
+    create: {
+      noRekening: noRekeningWaliKelasTest,
+      nama: 'Wali Kelas Test',
+      jenisNasabah: 'wali_kelas',
+      nip: '171717',
+      jabatan: 'Wali Kelas XII RPL 1',
+      kelas: 'XII RPL 1',
+      jenisKelamin: 'P',
+      alamat: 'Jl. Wali Kelas Test No. 1',
+      noTelepon: '081200000007',
+      tanggalLahir: new Date('1986-01-01'),
+      username: '171717',
+      password: await bcrypt.hash('walikelas123', 10),
+    },
+  });
+
+  const noRekeningUmumTest = buildNoRekening(7);
   await prisma.nasabah.upsert({
     where: { username: '181818' },
     update: { password: await bcrypt.hash('umum123', 10) },

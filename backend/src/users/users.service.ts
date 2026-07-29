@@ -21,6 +21,7 @@ export interface UpdateUserInput {
   nama?: string;
   role?: Role;
   isActive?: boolean;
+  password?: string;
 }
 
 type SafeUser = Omit<User, 'password'>;
@@ -102,9 +103,13 @@ export class UsersService {
   async update(id: string, input: UpdateUserInput): Promise<SafeUser> {
     try {
       await this.findById(id);
+      const { password, ...rest } = input;
       const user = await this.prisma.user.update({
         where: { id },
-        data: input,
+        data: {
+          ...rest,
+          ...(password ? { password: await bcrypt.hash(password, 10) } : {}),
+        },
       });
       return this.excludePassword(user);
     } catch (error) {

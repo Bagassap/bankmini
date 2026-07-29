@@ -15,14 +15,12 @@ import { CreateNasabahDto } from './dto/create-nasabah.dto';
 import { UpdateNasabahDto } from './dto/update-nasabah.dto';
 import { UpdateOwnProfileDto } from './dto/update-own-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { StaffOnlyGuard } from '../auth/staff-only.guard';
 import { NasabahOnlyGuard } from '../auth/nasabah-only.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { JwtPayload } from '../auth/jwt.strategy';
 
 @Controller('nasabah')
-@UseGuards(JwtAuthGuard)
 export class NasabahController {
   constructor(private readonly nasabahService: NasabahService) {}
 
