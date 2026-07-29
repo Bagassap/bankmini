@@ -1,9 +1,31 @@
-# compiled output
-/dist
-/node_modules
-/build
+# dependencies
+node_modules/
+backend/node_modules/
+frontend/node_modules/
 
-# Logs
+# backend (NestJS) build output
+backend/dist/
+backend/generated/prisma/
+backend/src/generated/prisma/
+
+# frontend (Next.js) build output
+frontend/.next/
+frontend/out/
+frontend/.vercel
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
+
+# env files
+.env
+.env.*
+backend/.env
+frontend/.env.local
+frontend/.env*.local
+
+# local data imports (contains real nasabah data)
+backend/src/csv/
+
+# logs
 logs
 *.log
 npm-debug.log*
@@ -15,12 +37,12 @@ lerna-debug.log*
 # OS
 .DS_Store
 
-# Tests
-/coverage
-/.nyc_output
+# tests / coverage
+coverage/
+.nyc_output/
 
 # IDEs and editors
-/.idea
+.idea/
 .project
 .classpath
 .c9/
@@ -35,28 +57,15 @@ lerna-debug.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# dotenv environment variable files
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
-
 # temp directory
 .temp
 .tmp
 
-# Runtime data
+# runtime data
 pids
 *.pid
 *.seed
 *.pid.lock
 
-# Diagnostic reports (https://nodejs.org/api/report.html)
+# diagnostic reports
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
-
-/generated/prisma
-/src/generated/prisma
-
-# local data imports (contains real nasabah data)
-/src/csv
