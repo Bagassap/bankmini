@@ -107,41 +107,42 @@ export default function LoginPage() {
               className="h-auto w-28 lg:w-56"
             />
             <span className="text-base font-bold text-white lg:hidden">
-              Bank Digital Sekolah
+              Bank Mini NUSA
             </span>
           </motion.div>
 
           <div className="relative z-10 hidden text-center lg:block">
-            <h2 className="flex flex-wrap justify-center gap-x-2.5 text-2xl leading-tight font-black tracking-tight text-white">
-              {["Bank", "Digital", "Sekolah"].map((word, i) => (
-                <motion.span
-                  key={word}
-                  initial={{ opacity: 0, y: 26, filter: "blur(8px)" }}
-                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                  transition={{
-                    duration: 0.6,
-                    delay: 0.6 + i * 0.12,
-                    ease: [0.16, 1, 0.3, 1],
-                  }}
-                  className={
-                    word === "Sekolah"
-                      ? "animate-gradient-x bg-linear-to-r from-white via-primary/30 to-white bg-clip-text text-transparent"
-                      : "inline-block"
-                  }
-                >
-                  {word}
-                </motion.span>
-              ))}
+            <h2 className="flex flex-col items-center justify-center text-center text-2xl leading-tight font-black tracking-tight text-white">
+              <div className="flex flex-wrap justify-center gap-x-2.5">
+                {["Bank", "Mini"].map((word, i) => (
+                  <motion.span
+                    key={word}
+                    initial={{ opacity: 0, y: 26, filter: "blur(8px)" }}
+                    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                    transition={{
+                      duration: 0.6,
+                      delay: 0.6 + i * 0.12,
+                      ease: [0.16, 1, 0.3, 1],
+                    }}
+                    className="inline-block"
+                  >
+                    {word}
+                  </motion.span>
+                ))}
+              </div>
+              <motion.span
+                initial={{ opacity: 0, y: 26, filter: "blur(8px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                transition={{
+                  duration: 0.6,
+                  delay: 0.6 + 2 * 0.12,
+                  ease: [0.16, 1, 0.3, 1],
+                }}
+                className="animate-gradient-x inline-block bg-linear-to-r from-white via-primary/30 to-white bg-clip-text text-transparent"
+              >
+                NUSA
+              </motion.span>
             </h2>
-
-            <motion.p
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 1.1 }}
-              className="mx-auto mt-3 max-w-xs text-sm leading-relaxed text-white/70"
-            >
-              Solusi tabungan digital untuk siswa, guru, dan staf sekolah.
-            </motion.p>
           </div>
         </motion.div>
 
