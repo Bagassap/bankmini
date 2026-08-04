@@ -10,7 +10,11 @@ import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { NasabahService } from '../nasabah/nasabah.service';
 import { PrismaService } from '../prisma/prisma.service';
-import type { AuthAccountType, JwtPayload } from './jwt-payload.interface';
+import type {
+  AuthAccountType,
+  JwtPayload,
+  LinkedStaffInfo,
+} from './jwt-payload.interface';
 
 export interface LoginInput {
   username: string;
@@ -26,6 +30,7 @@ export interface LoginResult {
     nama: string;
     role: string;
     noRekening?: string;
+    linkedStaff?: LinkedStaffInfo;
   };
 }
 
@@ -53,25 +58,36 @@ export class AuthService {
     try {
       const staff = await this.usersService.findByUsername(input.username);
       if (staff) {
-        if (!staff.isActive) {
-          throw new UnauthorizedException('Username atau password salah');
-        }
-        const isPasswordValid = await bcrypt.compare(
-          input.password,
-          staff.password,
+        // A staff username that is also someone's nasabah No Rekening means
+        // this is a dual-role account (e.g. admin who is also a guru) -
+        // that person now logs in with their NPY/NIS only, which grants
+        // both sides at once. Their old staff username is superseded, so
+        // fall through (it won't match any nasabah username either, which
+        // correctly ends in "invalid credentials" for a No Rekening login).
+        const linkedNasabah = await this.nasabahService.findByNoRekeningOrNull(
+          staff.username,
         );
-        if (!isPasswordValid) {
-          throw new UnauthorizedException('Username atau password salah');
+        if (!linkedNasabah) {
+          if (!staff.isActive) {
+            throw new UnauthorizedException('Username atau password salah');
+          }
+          const isPasswordValid = await bcrypt.compare(
+            input.password,
+            staff.password,
+          );
+          if (!isPasswordValid) {
+            throw new UnauthorizedException('Username atau password salah');
+          }
+
+          await this.usersService.updateLastLogin(staff.id);
+
+          return this.buildResult('staff', {
+            id: staff.id,
+            username: staff.username,
+            nama: staff.nama,
+            role: staff.role,
+          });
         }
-
-        await this.usersService.updateLastLogin(staff.id);
-
-        return this.buildResult('staff', {
-          id: staff.id,
-          username: staff.username,
-          nama: staff.nama,
-          role: staff.role,
-        });
       }
 
       const nasabah = await this.nasabahService.findByUsername(
@@ -91,12 +107,28 @@ export class AuthService {
 
         await this.nasabahService.updateLastLogin(nasabah.id);
 
+        const linkedStaffUser = await this.usersService.findByUsername(
+          nasabah.noRekening,
+        );
+        const linkedStaff: LinkedStaffInfo | undefined =
+          linkedStaffUser && linkedStaffUser.isActive
+            ? {
+                id: linkedStaffUser.id,
+                role: linkedStaffUser.role,
+                nama: linkedStaffUser.nama,
+              }
+            : undefined;
+        if (linkedStaff) {
+          await this.usersService.updateLastLogin(linkedStaff.id);
+        }
+
         return this.buildResult('nasabah', {
           id: nasabah.id,
           username: nasabah.username,
           nama: nasabah.nama,
           role: nasabah.jenisNasabah,
           noRekening: nasabah.noRekening,
+          linkedStaff,
         });
       }
 
@@ -172,6 +204,7 @@ export class AuthService {
       role: user.role,
       accountType,
       sid: session.id,
+      ...(user.linkedStaff ? { linkedStaff: user.linkedStaff } : {}),
     };
     const accessToken = await this.jwtService.signAsync(payload);
     return { accessToken, accountType, user };

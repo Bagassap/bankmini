@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Lock, Loader2, User } from "lucide-react";
-import toast from "react-hot-toast";
+import { notify } from "@/store/notifyStore";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
-import { isAdminRole } from "@/lib/role";
+import { isAdminRole, isTellerTierRoleValue } from "@/lib/role";
 import { useAuthStore } from "@/store/authStore";
 import type { AccountType, User as AuthUser } from "@/lib/types";
 import FloatingBlobs from "@/components/FloatingBlobs";
@@ -52,16 +52,20 @@ export default function LoginPage() {
       });
       const user = { ...data.user, accountType: data.accountType };
       login(user);
-      toast.success(`Selamat datang, ${data.user.nama}`);
-      const destination =
-        data.accountType === "nasabah"
+      notify.success(`Selamat datang, ${data.user.nama}`);
+      const staffRole = user.linkedStaff?.role;
+      const destination = staffRole
+        ? isTellerTierRoleValue(staffRole)
+          ? "/dashboard"
+          : "/admin/dashboard"
+        : data.accountType === "nasabah"
           ? "/portal/dashboard"
           : isAdminRole(user)
             ? "/admin/dashboard"
             : "/dashboard";
       router.replace(destination);
     } catch (error) {
-      toast.error(getErrorMessage(error, "Username atau password salah"));
+      notify.error(getErrorMessage(error, "Username atau password salah"));
     } finally {
       setLoading(false);
     }

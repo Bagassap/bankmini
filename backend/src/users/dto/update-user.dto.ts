@@ -17,7 +17,7 @@ export class UpdateUserDto {
   nama?: string;
 
   @IsOptional()
-  @IsIn(['superadmin', 'admin', 'teller'])
+  @IsIn(['superadmin', 'admin', 'teller', 'co_teller'])
   role?: Role;
 
   @IsOptional()

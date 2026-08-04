@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import toast from "react-hot-toast";
+import { notify } from "@/store/notifyStore";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -15,8 +15,8 @@ import {
   Hash,
   History,
   Loader2,
+  Receipt,
   Search,
-  Tag,
   TrendingUp,
   Wallet,
   X,
@@ -24,13 +24,22 @@ import {
 import Layout from "@/components/Layout";
 import { DateRangePicker } from "@/components/DateRangePicker";
 import { RatioRing } from "@/components/RatioRing";
+import { KuitansiModal } from "@/components/transaksi/KuitansiModal";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { useAuthStore } from "@/store/authStore";
-import type { JenisTransaksi, Transaksi } from "@/lib/types";
+import type { JenisNasabah, JenisTransaksi, Transaksi } from "@/lib/types";
 
 const PAGE_SIZE = 8;
+
+function todayIso(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
 const inputClass =
   "w-full rounded-xl border border-transparent bg-background-hover px-3 py-2.5 text-sm text-text-primary transition-shadow focus:border-primary focus:bg-background-card focus:outline-none focus:ring-2 focus:ring-primary/20";
@@ -44,13 +53,22 @@ const JENIS_FILTERS: { label: string; value: JenisTransaksi | "all" }[] = [
 export default function RiwayatPage() {
   const user = useAuthStore((state) => state.user);
   const [jenisFilter, setJenisFilter] = useState<JenisTransaksi | "all">("all");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [from, setFrom] = useState(todayIso());
+  const [to, setTo] = useState(todayIso());
   const [search, setSearch] = useState("");
   const [mutasi, setMutasi] = useState<Transaksi[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [viewing, setViewing] = useState<Transaksi | null>(null);
+  const [kuitansiTrx, setKuitansiTrx] = useState<Transaksi | null>(null);
+
+  const kuitansiNasabah = user
+    ? {
+        nama: user.nama,
+        noRekening: user.noRekening ?? "-",
+        jenisNasabah: user.role as JenisNasabah,
+      }
+    : null;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -68,7 +86,7 @@ export default function RiwayatPage() {
       setMutasi(data);
       setPage(1);
     } catch (error) {
-      toast.error(getErrorMessage(error, "Gagal memuat riwayat transaksi"));
+      notify.error(getErrorMessage(error, "Gagal memuat riwayat transaksi"));
     } finally {
       setLoading(false);
     }
@@ -114,7 +132,6 @@ export default function RiwayatPage() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pagedList = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const maxAmount = Math.max(...filtered.map((t) => Number(t.jumlah)), 1);
 
   return (
     <Layout>
@@ -179,7 +196,7 @@ export default function RiwayatPage() {
 
         <motion.div
           variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } }}
-          className="relative overflow-hidden rounded-3xl bg-background-card p-6 shadow-soft lg:col-span-2"
+          className="relative flex h-full flex-col overflow-hidden rounded-3xl bg-background-card p-6 shadow-soft lg:col-span-2"
         >
           <div
             aria-hidden
@@ -200,7 +217,12 @@ export default function RiwayatPage() {
 
           <div className="relative flex flex-col items-center gap-6 md:flex-row">
             <RatioRing percent={stats.setorShare} color="#1120f0" />
-            <div className="grid w-full flex-1 grid-cols-3 gap-3">
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.08 } } }}
+              className="grid w-full flex-1 grid-cols-3 gap-3"
+            >
               {[
                 {
                   label: "Total Transaksi",
@@ -208,6 +230,8 @@ export default function RiwayatPage() {
                   value: filtered.length,
                   icon: ClipboardList,
                   gradient: "from-primary to-primary-dark",
+                  progressPct: 100,
+                  progressLabel: "Seluruh riwayat",
                 },
                 {
                   label: "Setor",
@@ -215,6 +239,8 @@ export default function RiwayatPage() {
                   value: stats.setorCount,
                   icon: ArrowDownToLine,
                   gradient: "from-gradient-green-from to-gradient-green-to",
+                  progressPct: stats.setorShare,
+                  progressLabel: "Dari total nominal",
                 },
                 {
                   label: "Tarik",
@@ -222,60 +248,91 @@ export default function RiwayatPage() {
                   value: stats.tarikCount,
                   icon: ArrowUpFromLine,
                   gradient: "from-gradient-orange-from to-gradient-orange-to",
+                  progressPct: 100 - stats.setorShare,
+                  progressLabel: "Dari total nominal",
                 },
               ].map((tile) => (
-                <div
+                <motion.div
                   key={tile.label}
-                  className={`relative overflow-hidden rounded-2xl bg-linear-to-br p-4 text-white shadow-sm ${tile.gradient}`}
+                  variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
+                  whileHover={{ y: -3 }}
+                  className={`relative flex h-full flex-col justify-center overflow-hidden rounded-2xl bg-linear-to-br p-4 text-white shadow-sm transition-shadow hover:shadow-md ${tile.gradient}`}
                 >
                   <div
                     aria-hidden
                     className="pointer-events-none absolute inset-0 opacity-20 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_1px,transparent_1px)] bg-size-[12px_12px]"
                   />
-                  <span className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
-                    <tile.icon size={15} />
-                  </span>
-                  <div className="relative mt-3 flex items-center gap-2">
-                    <p className="text-2xl font-bold">{tile.value}</p>
-                    <div className="min-w-0 leading-tight">
-                      <p className="truncate text-[11px] font-semibold text-white/85">{tile.label}</p>
-                      <p className="truncate text-[10px] text-white/60">{tile.caption}</p>
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute -top-6 -right-6 h-16 w-16 rounded-full bg-white/10 blur-xl"
+                  />
+                  <div className="relative flex items-center gap-2.5">
+                    <motion.span
+                      initial={{ scale: 0.6, opacity: 0, rotate: -15 }}
+                      animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm"
+                    >
+                      <tile.icon size={15} />
+                    </motion.span>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <p className="text-2xl font-bold">{tile.value}</p>
+                      <div className="min-w-0 leading-tight">
+                        <p className="truncate text-[11px] font-semibold text-white/85">
+                          {tile.label}
+                        </p>
+                        <p className="truncate text-[10px] text-white/60">{tile.caption}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
+                  <div className="relative mt-3">
+                    <div className="mb-1 flex items-center justify-between text-[10px] text-white/75">
+                      <span className="truncate">{tile.progressLabel}</span>
+                      <span className="shrink-0 font-bold text-white">{tile.progressPct}%</span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/20">
+                      <div
+                        className="h-full rounded-full bg-white transition-[width] duration-700"
+                        style={{ width: `${Math.min(100, Math.max(0, tile.progressPct))}%` }}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </div>
 
-          <div className="relative mt-5 flex items-center gap-2 border-t border-border pt-4 text-xs">
-            <span className="font-semibold text-text-secondary">Proporsi Setor vs Tarik</span>
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-background-hover">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${stats.setorShare}%` }}
-                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                className="h-full rounded-full bg-success"
-              />
-            </div>
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 font-bold text-primary">
-              {stats.setorShare}% : {100 - stats.setorShare}%
-            </span>
-          </div>
-
-          {filtered.length > 0 && (
-            <div className="relative mt-3 flex flex-wrap items-center gap-2 text-[11px]">
-              <span className="flex items-center gap-1.5 rounded-full bg-background-hover px-2.5 py-1 font-semibold text-text-secondary">
-                <TrendingUp size={12} className="text-primary" />
-                Rata-rata {formatCurrency(stats.rataRata)}/transaksi
+          <div className="relative mt-auto">
+            <div className="flex items-center gap-2 border-t border-border pt-4 text-xs">
+              <span className="font-semibold text-text-secondary">Proporsi Setor vs Tarik</span>
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-background-hover">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${stats.setorShare}%` }}
+                  transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                  className="h-full rounded-full bg-success"
+                />
+              </div>
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 font-bold text-primary">
+                {stats.setorShare}% : {100 - stats.setorShare}%
               </span>
-              {stats.earliest && (
-                <span className="flex items-center gap-1.5 rounded-full bg-background-hover px-2.5 py-1 font-semibold text-text-secondary">
-                  <History size={12} className="text-primary" />
-                  Sejak {formatDate(stats.earliest)}
-                </span>
-              )}
             </div>
-          )}
+
+            {filtered.length > 0 && (
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
+                <span className="flex items-center gap-1.5 rounded-full bg-background-hover px-2.5 py-1 font-semibold text-text-secondary">
+                  <TrendingUp size={12} className="text-primary" />
+                  Rata-rata {formatCurrency(stats.rataRata)}/transaksi
+                </span>
+                {stats.earliest && (
+                  <span className="flex items-center gap-1.5 rounded-full bg-background-hover px-2.5 py-1 font-semibold text-text-secondary">
+                    <History size={12} className="text-primary" />
+                    Sejak {formatDate(stats.earliest)}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </motion.div>
       </motion.div>
 
@@ -318,97 +375,120 @@ export default function RiwayatPage() {
           </div>
         </div>
 
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.05 } } }}
-          className="divide-y divide-border"
-        >
-          {loading ? (
-            <div className="flex flex-col items-center gap-2 px-5 py-12 text-center text-text-secondary">
-              <Loader2 size={22} className="animate-spin text-primary" />
-              Memuat riwayat transaksi...
-            </div>
-          ) : pagedList.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 px-5 py-12 text-center text-text-secondary">
-              <ClipboardList size={26} className="text-text-muted" />
-              Tidak ada transaksi yang cocok
-            </div>
-          ) : (
-            pagedList.map((trx) => {
-              const isSetor = trx.jenisTransaksi === "setor";
-              const percent = Math.round((Number(trx.jumlah) / maxAmount) * 100);
-              return (
-                <motion.div
-                  key={trx.id}
-                  variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0, transition: { duration: 0.25 } } }}
-                  className="flex items-start gap-3 p-4 transition-colors hover:bg-background-hover sm:p-5"
-                >
-                  <span
-                    className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
-                      isSetor ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
-                    }`}
-                  >
-                    {isSetor ? <ArrowDownToLine size={16} /> : <ArrowUpFromLine size={16} />}
-                  </span>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-text-primary capitalize">
-                          {isSetor ? "Setor Tunai" : "Tarik Tunai"}
-                        </p>
-                        <p className="truncate text-xs text-text-muted">
-                          {formatDate(trx.createdAt)} &middot;{" "}
-                          <span className="font-mono">{trx.noTransaksi}</span>
-                        </p>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <p className={`font-bold ${isSetor ? "text-success" : "text-danger"}`}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-border bg-background-hover">
+              <tr>
+                <th className="px-4 py-3 text-xs font-bold tracking-wide text-text-muted uppercase">
+                  Jenis
+                </th>
+                <th className="px-4 py-3 text-xs font-bold tracking-wide text-text-muted uppercase">
+                  No Transaksi
+                </th>
+                <th className="px-4 py-3 text-xs font-bold tracking-wide text-text-muted uppercase">
+                  Keterangan
+                </th>
+                <th className="px-4 py-3 text-xs font-bold tracking-wide text-text-muted uppercase">
+                  Tanggal
+                </th>
+                <th className="px-4 py-3 text-xs font-bold tracking-wide text-text-muted uppercase">
+                  Jumlah
+                </th>
+                <th className="px-4 py-3 text-xs font-bold tracking-wide text-text-muted uppercase">
+                  Aksi
+                </th>
+              </tr>
+            </thead>
+            <motion.tbody
+              initial="hidden"
+              animate="visible"
+              variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.03 } } }}
+            >
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-12 text-center">
+                    <div className="flex flex-col items-center gap-2 text-text-secondary">
+                      <Loader2 size={22} className="animate-spin text-primary" />
+                      Memuat riwayat transaksi...
+                    </div>
+                  </td>
+                </tr>
+              ) : pagedList.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-12 text-center">
+                    <div className="flex flex-col items-center gap-2 text-text-secondary">
+                      <ClipboardList size={26} className="text-text-muted" />
+                      Tidak ada transaksi yang cocok
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                pagedList.map((trx) => {
+                  const isSetor = trx.jenisTransaksi === "setor";
+                  return (
+                    <motion.tr
+                      key={trx.id}
+                      variants={{
+                        hidden: { opacity: 0, y: 6 },
+                        visible: { opacity: 1, y: 0, transition: { duration: 0.25 } },
+                      }}
+                      className="border-b border-border transition-colors last:border-0 hover:bg-background-hover"
+                    >
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+                            isSetor ? "bg-success/15 text-success" : "bg-danger/15 text-danger"
+                          }`}
+                        >
+                          {isSetor ? <ArrowDownToLine size={12} /> : <ArrowUpFromLine size={12} />}
+                          {isSetor ? "Setor" : "Tarik"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-text-secondary">
+                        {trx.noTransaksi}
+                      </td>
+                      <td
+                        className="max-w-40 truncate px-4 py-3 text-xs text-text-secondary"
+                        title={trx.keterangan ?? undefined}
+                      >
+                        {trx.keterangan ?? "-"}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-text-secondary">
+                        {formatDate(trx.createdAt)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`font-bold ${isSetor ? "text-success" : "text-danger"}`}>
                           {isSetor ? "+" : "-"}
                           {formatCurrency(trx.jumlah)}
-                        </p>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-medium text-success">
-                          <CheckCircle2 size={10} />
-                          Success
                         </span>
-                      </div>
-                    </div>
-
-                    <p className="mt-1.5 flex items-center gap-1 truncate text-xs text-text-muted">
-                      <Tag size={11} className="shrink-0" />
-                      {trx.keterangan ?? "-"}
-                    </p>
-
-                    <div className="mt-2 flex items-center gap-3">
-                      <div className="flex min-w-0 flex-1 items-center gap-2">
-                        <div className="h-1.5 w-full max-w-32 overflow-hidden rounded-full bg-background-hover">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${percent}%` }}
-                            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                            className={`h-full rounded-full ${isSetor ? "bg-success" : "bg-danger"}`}
-                          />
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <motion.button
+                            whileTap={{ scale: 0.92 }}
+                            onClick={() => setViewing(trx)}
+                            className="flex items-center gap-1 rounded-lg bg-primary/10 px-2.5 py-1.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
+                          >
+                            <Eye size={12} />
+                            Detail
+                          </motion.button>
+                          <motion.button
+                            whileTap={{ scale: 0.92 }}
+                            onClick={() => setKuitansiTrx(trx)}
+                            className="flex items-center gap-1 rounded-lg bg-background-hover px-2.5 py-1.5 text-xs font-bold text-text-secondary transition-colors hover:text-text-primary"
+                          >
+                            <Receipt size={12} />
+                            Kuitansi
+                          </motion.button>
                         </div>
-                        <span className="shrink-0 text-[10px] font-semibold text-text-muted">
-                          {percent}%
-                        </span>
-                      </div>
-                      <motion.button
-                        whileTap={{ scale: 0.92 }}
-                        onClick={() => setViewing(trx)}
-                        className="flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20"
-                      >
-                        <Eye size={12} />
-                        Detail
-                      </motion.button>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })
-          )}
-        </motion.div>
+                      </td>
+                    </motion.tr>
+                  );
+                })
+              )}
+            </motion.tbody>
+          </table>
+        </div>
       </motion.div>
 
       <AnimatePresence>
@@ -527,6 +607,13 @@ export default function RiwayatPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <KuitansiModal
+        transaksi={kuitansiTrx}
+        nasabah={kuitansiNasabah}
+        tellerNama={kuitansiTrx?.processedBy?.nama ?? "-"}
+        onClose={() => setKuitansiTrx(null)}
+      />
     </Layout>
   );
 }

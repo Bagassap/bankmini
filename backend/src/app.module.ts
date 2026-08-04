@@ -9,6 +9,8 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { UsersModule } from './users/users.module';
 import { NasabahModule } from './nasabah/nasabah.module';
 import { TransaksiModule } from './transaksi/transaksi.module';
+import { SimpananModule } from './simpanan/simpanan.module';
+import { PiutangModule } from './piutang/piutang.module';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { TransaksiModule } from './transaksi/transaksi.module';
     UsersModule,
     NasabahModule,
     TransaksiModule,
+    SimpananModule,
+    PiutangModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: JwtAuthGuard }],

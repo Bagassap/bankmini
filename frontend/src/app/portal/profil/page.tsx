@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import toast from "react-hot-toast";
+import { notify } from "@/store/notifyStore";
 import {
   AlertCircle,
   BookUser,
   Calendar,
+  CalendarCheck2,
   CheckCircle2,
   Circle,
   Edit3,
@@ -27,13 +28,15 @@ import {
   Sparkles,
   User as UserIcon,
   Users,
+  VenusAndMars,
   Wallet,
   X,
+  XCircle,
 } from "lucide-react";
 import Layout from "@/components/Layout";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, formatLongDateID } from "@/lib/format";
 import { useAuthStore } from "@/store/authStore";
 import type { JenisNasabah, Nasabah } from "@/lib/types";
 
@@ -42,6 +45,7 @@ const JENIS_LABEL: Record<JenisNasabah, string> = {
   guru: "Guru",
   umum: "Umum",
   kelas: "Kelas",
+  wali_kelas: "Wali Kelas",
 };
 
 const JENIS_ICON: Record<JenisNasabah, typeof GraduationCap> = {
@@ -49,6 +53,7 @@ const JENIS_ICON: Record<JenisNasabah, typeof GraduationCap> = {
   guru: BookUser,
   umum: Users,
   kelas: School,
+  wali_kelas: ShieldCheck,
 };
 
 const inputClass =
@@ -97,7 +102,7 @@ export default function ProfilPage() {
         setAlamat(data.alamat ?? "");
         setNoTelepon(data.noTelepon ?? "");
       } catch (error) {
-        toast.error(getErrorMessage(error, "Gagal memuat profil"));
+        notify.error(getErrorMessage(error, "Gagal memuat profil"));
       } finally {
         setLoading(false);
       }
@@ -112,9 +117,9 @@ export default function ProfilPage() {
       const { data } = await api.patch<Nasabah>("/nasabah/me", { alamat, noTelepon });
       setProfile(data);
       setEditing(false);
-      toast.success("Profil berhasil diperbarui");
+      notify.success("Profil berhasil diperbarui");
     } catch (error) {
-      toast.error(getErrorMessage(error, "Gagal memperbarui profil"));
+      notify.error(getErrorMessage(error, "Gagal memperbarui profil"));
     } finally {
       setSavingProfile(false);
     }
@@ -123,18 +128,18 @@ export default function ProfilPage() {
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      toast.error("Konfirmasi password baru tidak cocok");
+      notify.error("Konfirmasi password baru tidak cocok");
       return;
     }
     setChangingPassword(true);
     try {
       await api.patch("/nasabah/me/password", { currentPassword, newPassword });
-      toast.success("Password berhasil diubah");
+      notify.success("Password berhasil diubah");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (error) {
-      toast.error(getErrorMessage(error, "Gagal mengubah password"));
+      notify.error(getErrorMessage(error, "Gagal mengubah password"));
     } finally {
       setChangingPassword(false);
     }
@@ -213,13 +218,7 @@ export default function ProfilPage() {
                   </span>
                   <div>
                     <p className="text-[10px] text-white/60">Tanggal Lahir</p>
-                    <p className="font-semibold">
-                      {new Date(profile.tanggalLahir).toLocaleDateString("id-ID", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                      })}
-                    </p>
+                    <p className="font-semibold">{formatLongDateID(profile.tanggalLahir)}</p>
                   </div>
                 </div>
               )}
@@ -247,6 +246,72 @@ export default function ProfilPage() {
                   </div>
                 </div>
               )}
+              {profile.jenisNasabah === "siswa" && profile.nis && (
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15">
+                    <Hash size={13} />
+                  </span>
+                  <div>
+                    <p className="text-[10px] text-white/60">NIS</p>
+                    <p className="font-semibold">{profile.nis}</p>
+                  </div>
+                </div>
+              )}
+              {profile.jenisKelamin && (
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15">
+                    <VenusAndMars size={13} />
+                  </span>
+                  <div>
+                    <p className="text-[10px] text-white/60">Jenis Kelamin</p>
+                    <p className="font-semibold">
+                      {profile.jenisKelamin === "L" ? "Laki-laki" : "Perempuan"}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {profile.noTelepon && (
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15">
+                    <Phone size={13} />
+                  </span>
+                  <div>
+                    <p className="text-[10px] text-white/60">No. Telepon</p>
+                    <p className="font-semibold">{profile.noTelepon}</p>
+                  </div>
+                </div>
+              )}
+              {profile.alamat && (
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15">
+                    <Home size={13} />
+                  </span>
+                  <div>
+                    <p className="text-[10px] text-white/60">Alamat</p>
+                    <p className="font-semibold">{profile.alamat}</p>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15">
+                  {profile.status === "aktif" ? <CheckCircle2 size={13} /> : <XCircle size={13} />}
+                </span>
+                <div>
+                  <p className="text-[10px] text-white/60">Status</p>
+                  <p className="font-semibold">
+                    {profile.status === "aktif" ? "Aktif" : "Non-aktif"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15">
+                  <CalendarCheck2 size={13} />
+                </span>
+                <div>
+                  <p className="text-[10px] text-white/60">Bergabung Sejak</p>
+                  <p className="font-semibold">{formatLongDateID(profile.createdAt)}</p>
+                </div>
+              </div>
             </div>
           </motion.div>
 

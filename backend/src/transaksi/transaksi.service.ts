@@ -7,6 +7,12 @@ import {
 } from '@nestjs/common';
 import { JenisTransaksi, Prisma, Transaksi } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  startOfWibDay,
+  endOfWibDayExclusive,
+  wibDateParts,
+  wibDayRangeFromDateOnly,
+} from '../common/wib-date';
 
 export interface SetorTarikInput {
   nasabahId: string;
@@ -35,10 +41,13 @@ export class TransaksiService {
   private async generateNoTransaksi(
     tx: Prisma.TransactionClient,
   ): Promise<string> {
-    const now = new Date();
-    const yy = String(now.getFullYear()).slice(-2);
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
+    // Must follow the WIB calendar day, not the server's own (UTC) system
+    // date - otherwise transactions made 00:00-07:00 WIB would be stamped
+    // with the previous day's prefix.
+    const { year, month, day } = wibDateParts();
+    const yy = String(year).slice(-2);
+    const mm = String(month + 1).padStart(2, '0');
+    const dd = String(day).padStart(2, '0');
     const prefix = `TRX${yy}${mm}${dd}`;
 
     const count = await tx.transaksi.count({
@@ -143,24 +152,122 @@ export class TransaksiService {
     }
   }
 
-  async getMutasi(
-    nasabahId: string,
-    filter: MutasiFilter = {},
-  ): Promise<Transaksi[]> {
+  // Corrects a teller's mistyped transaction (wrong nominal/keterangan).
+  // Because every Transaksi row snapshots a running saldoSebelum/saldoSesudah
+  // rather than being computed on read, changing jumlah shifts the balance
+  // for this transaction AND every later transaction of the same nasabah by
+  // the same fixed delta - cascaded here in one atomic transaction, then the
+  // nasabah's current saldo (which mirrors the ledger's latest saldoSesudah)
+  // is shifted by that same delta. noTransaksi (not createdAt) orders the
+  // cascade since it's a guaranteed strictly-increasing sequence, immune to
+  // millisecond timestamp collisions.
+  async updateTransaksi(
+    id: string,
+    jumlah: number,
+    keterangan: string | undefined,
+    editedById: string,
+  ): Promise<Transaksi> {
+    try {
+      const newJumlah = new Prisma.Decimal(jumlah);
+      if (newJumlah.lte(0)) {
+        throw new BadRequestException('Jumlah harus lebih dari 0');
+      }
+
+      return await this.prisma.$transaction(async (tx) => {
+        const trx = await tx.transaksi.findUnique({ where: { id } });
+        if (!trx) {
+          throw new NotFoundException('Transaksi tidak ditemukan');
+        }
+
+        const signedEffect = (t: {
+          jenisTransaksi: JenisTransaksi;
+          jumlah: Prisma.Decimal;
+        }) =>
+          t.jenisTransaksi === JenisTransaksi.setor
+            ? t.jumlah
+            : t.jumlah.negated();
+
+        const delta = signedEffect({ ...trx, jumlah: newJumlah }).sub(
+          signedEffect(trx),
+        );
+        const newSaldoSesudah = trx.saldoSesudah.add(delta);
+        if (newSaldoSesudah.lt(0)) {
+          throw new BadRequestException(
+            'Perubahan ini membuat saldo nasabah menjadi negatif',
+          );
+        }
+
+        const laterTrx = delta.isZero()
+          ? []
+          : await tx.transaksi.findMany({
+              where: {
+                nasabahId: trx.nasabahId,
+                noTransaksi: { gt: trx.noTransaksi },
+              },
+              orderBy: { noTransaksi: 'asc' },
+            });
+
+        for (const t of laterTrx) {
+          if (t.saldoSesudah.add(delta).lt(0)) {
+            throw new BadRequestException(
+              'Perubahan ini menyebabkan saldo nasabah menjadi negatif pada transaksi setelahnya',
+            );
+          }
+        }
+
+        const updated = await tx.transaksi.update({
+          where: { id },
+          data: {
+            jumlah: newJumlah,
+            saldoSesudah: newSaldoSesudah,
+            keterangan: keterangan ?? null,
+            editedById,
+          },
+        });
+
+        for (const t of laterTrx) {
+          await tx.transaksi.update({
+            where: { id: t.id },
+            data: {
+              saldoSebelum: t.saldoSebelum.add(delta),
+              saldoSesudah: t.saldoSesudah.add(delta),
+            },
+          });
+        }
+
+        if (!delta.isZero()) {
+          await tx.nasabah.update({
+            where: { id: trx.nasabahId },
+            data: { saldo: { increment: delta } },
+          });
+        }
+
+        return updated;
+      });
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException('Gagal mengubah transaksi');
+    }
+  }
+
+  async getMutasi(nasabahId: string, filter: MutasiFilter = {}) {
     try {
       const where: Prisma.TransaksiWhereInput = { nasabahId };
       if (filter.from || filter.to) {
         where.createdAt = {
-          ...(filter.from ? { gte: filter.from } : {}),
-          ...(filter.to ? { lte: filter.to } : {}),
+          ...(filter.from
+            ? { gte: wibDayRangeFromDateOnly(filter.from).start }
+            : {}),
+          ...(filter.to ? { lt: wibDayRangeFromDateOnly(filter.to).end } : {}),
         };
       }
 
       return await this.prisma.transaksi.findMany({
         where,
+        include: { processedBy: { select: { nama: true } } },
         orderBy: { createdAt: 'desc' },
       });
-    } catch (error) {
+    } catch {
       throw new InternalServerErrorException('Gagal mengambil mutasi');
     }
   }
@@ -172,37 +279,35 @@ export class TransaksiService {
       if (filter.nasabahId) where.nasabahId = filter.nasabahId;
       if (filter.from || filter.to) {
         where.createdAt = {
-          ...(filter.from ? { gte: filter.from } : {}),
-          ...(filter.to ? { lte: filter.to } : {}),
+          ...(filter.from
+            ? { gte: wibDayRangeFromDateOnly(filter.from).start }
+            : {}),
+          ...(filter.to ? { lt: wibDayRangeFromDateOnly(filter.to).end } : {}),
         };
       }
 
       return await this.prisma.transaksi.findMany({
         where,
-        include: { nasabah: true },
+        include: {
+          nasabah: true,
+          processedBy: { select: { nama: true } },
+          editedBy: { select: { nama: true } },
+        },
         orderBy: { createdAt: 'desc' },
         take: filter.limit,
       });
-    } catch (error) {
-      throw new InternalServerErrorException(
-        'Gagal mengambil data transaksi',
-      );
+    } catch {
+      throw new InternalServerErrorException('Gagal mengambil data transaksi');
     }
   }
 
   async getTransaksiStats() {
     try {
-      const now = new Date();
-      const startOfDay = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-      );
-      const endOfDay = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate() + 1,
-      );
+      // "Today" must follow WIB (UTC+7), not the server's own system
+      // timezone - computed from a UTC instant so it's correct regardless
+      // of what timezone the host happens to run in.
+      const startOfDay = startOfWibDay();
+      const endOfDay = endOfWibDayExclusive();
 
       const grouped = await this.prisma.transaksi.groupBy({
         by: ['jenisTransaksi'],
@@ -228,10 +333,9 @@ export class TransaksiService {
           jumlahTransaksi: tarik?._count._all ?? 0,
           totalNominal: tarik?._sum.jumlah ?? 0,
         },
-        totalTransaksi:
-          (setor?._count._all ?? 0) + (tarik?._count._all ?? 0),
+        totalTransaksi: (setor?._count._all ?? 0) + (tarik?._count._all ?? 0),
       };
-    } catch (error) {
+    } catch {
       throw new InternalServerErrorException(
         'Gagal mengambil statistik transaksi',
       );

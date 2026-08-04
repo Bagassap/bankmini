@@ -1,5 +1,11 @@
 import { Role } from '../../generated/prisma/client';
-import { IsIn, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 export class CreateUserDto {
   @IsString()
@@ -15,6 +21,6 @@ export class CreateUserDto {
   nama: string;
 
   @IsOptional()
-  @IsIn(['superadmin', 'admin', 'teller'])
+  @IsIn(['superadmin', 'admin', 'teller', 'co_teller'])
   role?: Role;
 }

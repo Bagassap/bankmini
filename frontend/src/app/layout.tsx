@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Toaster } from "react-hot-toast";
+import { NotifyModal } from "@/components/common/NotifyModal";
 import { satoshi } from "@/lib/fonts";
 import "./globals.css";
 
@@ -17,7 +17,7 @@ export default function RootLayout({
     <html lang="id" className={`${satoshi.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans">
         {children}
-        <Toaster position="top-right" />
+        <NotifyModal />
       </body>
     </html>
   );

@@ -4,6 +4,7 @@ import {
   BookUser,
   GraduationCap,
   School,
+  ShieldCheck,
   Sparkles,
   Tag,
   Users,
@@ -16,6 +17,7 @@ export const jenisLabel: Record<JenisNasabah, string> = {
   guru: "Guru",
   umum: "Umum",
   kelas: "Kelas",
+  wali_kelas: "Wali Kelas",
 };
 
 export const JENIS_ICON: Record<JenisNasabah, LucideIcon> = {
@@ -23,6 +25,7 @@ export const JENIS_ICON: Record<JenisNasabah, LucideIcon> = {
   guru: BookUser,
   umum: Users,
   kelas: School,
+  wali_kelas: ShieldCheck,
 };
 
 export const GUIDE_COLORS = ["#1120f0", "#22c55e", "#ea580c"];

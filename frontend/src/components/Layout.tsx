@@ -3,7 +3,15 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { isAdminRole, isNasabahRole, isTellerRole } from "@/lib/role";
+import {
+  isAdminRole,
+  isNasabahRole,
+  isSuperadminRole,
+  isTellerTierRole,
+  isTellerTierRoleValue,
+  isWaliKelasRole,
+  linkedStaffRole,
+} from "@/lib/role";
 import { useAuthStore } from "@/store/authStore";
 import { useUIStore } from "@/store/uiStore";
 import Sidebar from "./Sidebar";
@@ -31,17 +39,50 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!user) return;
+
     if (isNasabahRole(user)) {
-      if (!pathname.startsWith("/portal")) {
+      const inPortal = pathname.startsWith("/portal");
+      const staffRole = linkedStaffRole(user);
+
+      if (staffRole) {
+        // Dual-role login (NPY grants both the nasabah portal and their
+        // linked staff panel in one session) - allow either area instead
+        // of confining them to /portal like a plain nasabah account.
+        const inStaffArea = isTellerTierRoleValue(staffRole)
+          ? !pathname.startsWith("/portal") && !pathname.startsWith("/admin")
+          : pathname.startsWith("/admin");
+
+        if (!inPortal && !inStaffArea) {
+          router.replace(
+            isTellerTierRoleValue(staffRole) ? "/dashboard" : "/admin/dashboard",
+          );
+          return;
+        }
+        if (pathname.startsWith("/admin/akun") && staffRole !== "superadmin") {
+          router.replace("/admin/dashboard");
+          return;
+        }
+        if (pathname.startsWith("/portal/kelas") && !isWaliKelasRole(user)) {
+          router.replace("/portal/dashboard");
+        }
+        return;
+      }
+
+      if (!inPortal) {
+        router.replace("/portal/dashboard");
+      } else if (pathname.startsWith("/portal/kelas") && !isWaliKelasRole(user)) {
         router.replace("/portal/dashboard");
       }
       return;
     }
+
     const inAdminArea = pathname.startsWith("/admin");
     if (isAdminRole(user) && !inAdminArea) {
       router.replace("/admin/dashboard");
-    } else if (isTellerRole(user) && (inAdminArea || pathname.startsWith("/portal"))) {
+    } else if (isTellerTierRole(user) && (inAdminArea || pathname.startsWith("/portal"))) {
       router.replace("/dashboard");
+    } else if (pathname.startsWith("/admin/akun") && !isSuperadminRole(user)) {
+      router.replace("/admin/dashboard");
     }
   }, [user, pathname, router]);
 

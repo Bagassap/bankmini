@@ -3,54 +3,39 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import toast from "react-hot-toast";
+import { notify } from "@/store/notifyStore";
 import {
   ArrowDownToLine,
   ArrowRight,
   ArrowUpFromLine,
   Calendar,
-  CalendarHeart,
   CheckCircle2,
   ClipboardList,
   History,
   PieChart,
+  Receipt,
   RefreshCw,
   ShieldCheck,
   Sparkles,
-  TrendingUp,
   UserCog,
-  Wallet,
 } from "lucide-react";
 import Layout from "@/components/Layout";
 import { AnimatedCurrency } from "@/components/dashboard/AnimatedCurrency";
-import { RatioRing } from "@/components/RatioRing";
+import { AtmCard } from "@/components/profil/AtmCard";
+import { KuitansiModal } from "@/components/transaksi/KuitansiModal";
 import { useLiveClock } from "@/hooks/useLiveClock";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
-import { formatCurrency, formatDate } from "@/lib/format";
+import {
+  formatCurrency,
+  formatDate,
+  formatFullDateID,
+  formatTimeShort,
+  getWibHour,
+} from "@/lib/format";
+import { jenisLabel } from "@/lib/transaksiMeta";
 import { useAuthStore } from "@/store/authStore";
-import type { JenisNasabah, Nasabah, Transaksi } from "@/lib/types";
-
-const JENIS_LABEL: Record<JenisNasabah, string> = {
-  siswa: "Siswa",
-  guru: "Guru",
-  umum: "Umum",
-  kelas: "Kelas",
-};
-
-const gridVariants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.1 } },
-};
-
-const cardVariants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] as const },
-  },
-};
+import type { Nasabah, Transaksi } from "@/lib/types";
 
 export default function PortalDashboardPage() {
   const router = useRouter();
@@ -60,6 +45,7 @@ export default function PortalDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [kuitansiTrx, setKuitansiTrx] = useState<Transaksi | null>(null);
   const now = useLiveClock();
 
   const loadData = useCallback(async (isManualRefresh = false) => {
@@ -74,7 +60,7 @@ export default function PortalDashboardPage() {
       setMutasi(mutasiRes.data);
       setLastUpdated(new Date());
     } catch (error) {
-      toast.error(getErrorMessage(error, "Gagal memuat data akun"));
+      notify.error(getErrorMessage(error, "Gagal memuat data akun"));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -103,31 +89,16 @@ export default function PortalDashboardPage() {
 
   const recent = mutasi.slice(0, 5);
 
-  const fullDate = now
-    ? now.toLocaleDateString("id-ID", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      })
-    : "—";
+  const fullDate = now ? formatFullDateID(now) : "—";
   const greeting = (() => {
-    const hour = now?.getHours() ?? 12;
+    const hour = now ? getWibHour(now) : 12;
     if (hour < 10) return "Selamat pagi";
     if (hour < 15) return "Selamat siang";
     if (hour < 18) return "Selamat sore";
     return "Selamat malam";
   })();
   const initials = (user?.nama ?? "?").slice(0, 2).toUpperCase();
-  const lastUpdatedLabel = lastUpdated
-    ? lastUpdated.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
-    : "—";
-  const memberSince = profile
-    ? new Date(profile.createdAt).toLocaleDateString("id-ID", {
-        month: "long",
-        year: "numeric",
-      })
-    : "—";
+  const lastUpdatedLabel = lastUpdated ? formatTimeShort(lastUpdated) : "—";
 
   return (
     <Layout>
@@ -218,261 +189,263 @@ export default function PortalDashboardPage() {
         <p className="text-sm text-text-secondary">Memuat data...</p>
       ) : (
         <div className="space-y-4 md:space-y-6 2xl:space-y-7.5">
-          <motion.div
-            initial={{ opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-            className="relative overflow-hidden rounded-3xl bg-linear-to-br from-primary to-primary-dark p-6 text-white shadow-soft sm:p-8"
-          >
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 opacity-20 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_1px,transparent_1px)] bg-size-[18px_18px]"
-            />
-            <div className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
+          <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-3">
+            <motion.div
+              initial={{ opacity: 0, y: -12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+              className="relative overflow-hidden rounded-3xl bg-linear-to-br from-primary to-primary-dark p-6 text-white shadow-soft sm:p-7 lg:col-span-2"
+            >
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 opacity-20 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_1px,transparent_1px)] bg-size-[18px_18px]"
+              />
+              <div className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
 
-            <div className="relative flex flex-col justify-between gap-6 sm:flex-row sm:items-center">
-              <div className="flex items-start gap-4">
-                <motion.span
-                  initial={{ scale: 0.6, opacity: 0, rotate: -15 }}
-                  animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                  whileHover={{ scale: 1.08, rotate: 6 }}
-                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm"
-                >
-                  <Wallet size={22} />
-                </motion.span>
-                <div>
+              <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:gap-6">
+                <div className="lg:flex-1">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-bold backdrop-blur-sm">
                     <ShieldCheck size={12} />
-                    {JENIS_LABEL[profile.jenisNasabah]} &middot; {profile.noRekening}
+                    {jenisLabel[profile.jenisNasabah]} &middot; {profile.noRekening}
                   </span>
-                  <p className="mt-3 text-xs font-semibold tracking-widest text-white/70 uppercase">
+                  <p className="mt-2.5 text-xs font-semibold tracking-widest text-white/70 uppercase">
                     Saldo Saat Ini
                   </p>
                   <AnimatedCurrency
                     value={Number(profile.saldo)}
-                    className="mt-1 block text-4xl font-bold sm:text-5xl"
+                    className="mt-1 block text-3xl font-bold sm:text-4xl"
                   />
-                  <p className="mt-2 flex items-center gap-1.5 text-xs text-white/70">
+                  <p className="mt-1.5 flex items-center gap-1.5 text-xs text-white/70">
                     <CheckCircle2 size={13} />
                     Saldo aktif &middot; Diperbarui {formatDate(profile.updatedAt)}
                   </p>
+
+                  <div className="mt-3.5 flex flex-wrap gap-3">
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => router.push("/portal/riwayat")}
+                      className="flex items-center gap-1.5 rounded-xl bg-white px-5 py-2.5 text-xs font-bold tracking-wide text-primary uppercase shadow-sm"
+                    >
+                      <History size={14} />
+                      Lihat Riwayat
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => router.push("/portal/profil")}
+                      className="flex items-center gap-1.5 rounded-xl border border-white/30 px-5 py-2.5 text-xs font-bold tracking-wide text-white uppercase"
+                    >
+                      <UserCog size={14} />
+                      Profil Saya
+                    </motion.button>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex flex-wrap gap-3">
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => router.push("/portal/riwayat")}
-                  className="flex items-center gap-1.5 rounded-xl bg-white px-5 py-2.5 text-xs font-bold tracking-wide text-primary uppercase shadow-sm"
-                >
-                  <History size={14} />
-                  Lihat Riwayat
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => router.push("/portal/profil")}
-                  className="flex items-center gap-1.5 rounded-xl border border-white/30 px-5 py-2.5 text-xs font-bold tracking-wide text-white uppercase"
-                >
-                  <UserCog size={14} />
-                  Profil Saya
-                </motion.button>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={gridVariants}
-            className="grid grid-cols-1 gap-4 md:gap-6 2xl:gap-7.5 lg:grid-cols-3"
-          >
-            <motion.div
-              variants={cardVariants}
-              whileHover={{ y: -4 }}
-              className="relative overflow-hidden rounded-3xl bg-background-card p-6 shadow-soft transition-shadow hover:shadow-lg lg:col-span-2"
-            >
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0 opacity-[0.03] bg-[radial-gradient(circle,rgba(17,32,240,0.9)_1px,transparent_1px)] bg-size-[16px_16px]"
-              />
-              <div className="relative mb-5 flex items-center gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <PieChart size={18} />
-                </span>
-                <div>
-                  <p className="text-sm font-bold text-text-primary">Arus Kas Rekening</p>
-                  <p className="text-xs text-text-secondary">
-                    Perbandingan setoran &amp; penarikan sepanjang waktu
+                <div className="border-t border-white/15 pt-4 lg:w-56 lg:shrink-0 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-6">
+                  <p className="mb-2.5 flex items-center gap-1.5 text-xs font-semibold tracking-widest text-white/70 uppercase">
+                    <PieChart size={12} />
+                    Arus Kas
                   </p>
-                </div>
-              </div>
-
-              <div className="relative flex flex-col items-center gap-6 sm:flex-row">
-                <RatioRing percent={stats.setorShare} color="#1120f0" />
-                <div className="flex w-full flex-1 flex-col gap-3">
-                  <div className="flex items-center gap-3 rounded-2xl bg-success/10 p-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
-                      <ArrowDownToLine size={16} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-text-secondary">Total Setoran</p>
-                      <p className="truncate text-base font-bold text-text-primary">
+                  <div className="flex flex-col gap-2">
+                    <div className="rounded-2xl bg-white/10 p-2.5">
+                      <p className="flex items-center gap-1.5 text-[10px] font-semibold text-white/70 uppercase">
+                        <ArrowDownToLine size={11} />
+                        Setoran
+                      </p>
+                      <p className="mt-0.5 truncate text-sm font-bold">
                         {formatCurrency(stats.totalSetor)}
                       </p>
                     </div>
-                    <span className="shrink-0 rounded-full bg-success/15 px-2 py-0.5 text-[11px] font-bold text-success">
-                      {stats.setorShare}%
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 rounded-2xl bg-danger/10 p-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger/15 text-danger">
-                      <ArrowUpFromLine size={16} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-text-secondary">Total Penarikan</p>
-                      <p className="truncate text-base font-bold text-text-primary">
+                    <div className="rounded-2xl bg-white/10 p-2.5">
+                      <p className="flex items-center gap-1.5 text-[10px] font-semibold text-white/70 uppercase">
+                        <ArrowUpFromLine size={11} />
+                        Penarikan
+                      </p>
+                      <p className="mt-0.5 truncate text-sm font-bold">
                         {formatCurrency(stats.totalTarik)}
                       </p>
                     </div>
-                    <span className="shrink-0 rounded-full bg-danger/15 px-2 py-0.5 text-[11px] font-bold text-danger">
-                      {100 - stats.setorShare}%
-                    </span>
                   </div>
-                  <div className="flex items-center gap-2 rounded-2xl border border-border px-3 py-2 text-xs text-text-secondary">
-                    <TrendingUp size={13} className="shrink-0 text-primary" />
-                    Rata-rata {formatCurrency(stats.rataRata)} per transaksi
+                  <div className="mt-2.5 flex h-1.5 w-full overflow-hidden rounded-full bg-white/15">
+                    <div
+                      className="h-full bg-white"
+                      style={{ width: `${stats.setorShare}%` }}
+                    />
+                    <div
+                      className="h-full bg-white/35"
+                      style={{ width: `${100 - stats.setorShare}%` }}
+                    />
+                  </div>
+                  <div className="mt-1.5 flex items-center justify-between text-[10px] text-white/60">
+                    <span>Setor {stats.setorShare}%</span>
+                    <span>Tarik {100 - stats.setorShare}%</span>
                   </div>
                 </div>
               </div>
             </motion.div>
 
-            <div className="flex flex-col gap-4 md:gap-6">
-              <motion.div
-                variants={cardVariants}
-                whileHover={{ y: -4 }}
-                className="relative flex-1 overflow-hidden rounded-3xl bg-linear-to-br from-primary to-primary-dark p-6 text-white shadow-soft transition-shadow hover:shadow-lg"
-              >
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 opacity-20 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_1px,transparent_1px)] bg-size-[16px_16px]"
-                />
-                <div className="pointer-events-none absolute -top-8 -right-8 h-28 w-28 rounded-full bg-white/10 blur-2xl" />
-                <motion.span
-                  whileHover={{ scale: 1.1, rotate: 8 }}
-                  className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm"
-                >
-                  <ClipboardList size={18} />
-                </motion.span>
-                <p className="relative mt-5 text-sm font-medium text-white/85">Jumlah Transaksi</p>
-                <p className="relative mt-1 text-2xl font-bold">{stats.totalTransaksi}</p>
-                <p className="relative mt-1 text-xs text-white/70">Tercatat di rekening Anda</p>
-              </motion.div>
-
-              <motion.div
-                variants={cardVariants}
-                whileHover={{ y: -4 }}
-                className="relative flex-1 overflow-hidden rounded-3xl bg-linear-to-br from-gradient-orange-from to-gradient-orange-to p-6 text-white shadow-soft transition-shadow hover:shadow-lg"
-              >
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 opacity-20 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_1px,transparent_1px)] bg-size-[16px_16px]"
-                />
-                <div className="pointer-events-none absolute -top-8 -right-8 h-28 w-28 rounded-full bg-white/10 blur-2xl" />
-                <motion.span
-                  whileHover={{ scale: 1.1, rotate: 8 }}
-                  className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm"
-                >
-                  <CalendarHeart size={18} />
-                </motion.span>
-                <p className="relative mt-5 text-sm font-medium text-white/85">Nasabah Sejak</p>
-                <p className="relative mt-1 text-2xl font-bold">{memberSince}</p>
-                <p className="relative mt-1 text-xs text-white/70">Terima kasih telah menabung bersama kami</p>
-              </motion.div>
-            </div>
-          </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: -12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
+              className="lg:col-span-1 lg:self-start"
+            >
+              <AtmCard nasabah={profile} />
+            </motion.div>
+          </div>
 
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.15 }}
-            className="overflow-hidden rounded-3xl bg-background-card shadow-soft"
+            className="relative overflow-hidden rounded-3xl bg-background-card shadow-soft"
           >
-            <div className="flex items-center justify-between gap-3 border-b border-border p-5">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 opacity-[0.03] bg-[radial-gradient(circle,rgba(17,32,240,0.9)_1px,transparent_1px)] bg-size-[16px_16px]"
+            />
+            <div className="pointer-events-none absolute -top-14 -right-14 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
+
+            <div className="relative flex items-center justify-between gap-3 border-b border-border p-5">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <motion.span
+                  initial={{ scale: 0.6, opacity: 0, rotate: -15 }}
+                  animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-primary to-primary-dark text-white shadow-sm"
+                >
                   <ClipboardList size={18} />
-                </span>
+                </motion.span>
                 <div>
                   <p className="text-sm font-bold text-text-primary">Transaksi Terakhir</p>
-                  <p className="text-xs text-text-secondary">5 transaksi paling baru</p>
+                  <p className="flex items-center gap-1.5 text-xs text-text-secondary">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success/60" />
+                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
+                    </span>
+                    {recent.length} transaksi terkini
+                  </p>
                 </div>
               </div>
+              {recent.length > 0 && (
+                <span className="hidden items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-[11px] font-bold text-primary sm:flex">
+                  <History size={12} />
+                  Real-time
+                </span>
+              )}
             </div>
 
             <motion.div
               initial="hidden"
               animate="visible"
               variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06 } } }}
-              className="divide-y divide-border"
+              className="relative divide-y divide-border"
             >
               {recent.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 px-5 py-12 text-center text-text-secondary">
-                  <ClipboardList size={26} className="text-text-muted" />
-                  Belum ada transaksi
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-background-hover">
+                    <ClipboardList size={22} className="text-text-muted" />
+                  </span>
+                  <p className="text-sm font-semibold">Belum ada transaksi</p>
+                  <p className="text-xs text-text-muted">
+                    Riwayat setor &amp; tarik Anda akan muncul di sini
+                  </p>
                 </div>
               ) : (
-                recent.map((trx) => {
+                recent.map((trx, i) => {
                   const isSetor = trx.jenisTransaksi === "setor";
                   return (
                     <motion.div
                       key={trx.id}
                       variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0, transition: { duration: 0.25 } } }}
+                      whileHover={{ x: 3 }}
                       className="flex items-center gap-3 p-4 transition-colors hover:bg-background-hover"
                     >
                       <span
-                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
-                          isSetor ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
+                        className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-sm ${
+                          isSetor
+                            ? "bg-linear-to-br from-gradient-green-from to-gradient-green-to"
+                            : "bg-linear-to-br from-gradient-orange-from to-gradient-orange-to"
                         }`}
                       >
-                        {isSetor ? <ArrowDownToLine size={16} /> : <ArrowUpFromLine size={16} />}
+                        {isSetor ? <ArrowDownToLine size={17} /> : <ArrowUpFromLine size={17} />}
+                        {i === 0 && (
+                          <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-background-card">
+                            <span className="h-2 w-2 rounded-full bg-success ring-2 ring-background-card" />
+                          </span>
+                        )}
                       </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-text-primary capitalize">
-                          {isSetor ? "Setor Tunai" : "Tarik Tunai"}
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <p className="text-sm font-semibold text-text-primary">
+                            {isSetor ? "Setor Tunai" : "Tarik Tunai"}
+                          </p>
+                          <span
+                            className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                              isSetor ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
+                            }`}
+                          >
+                            {isSetor ? "MASUK" : "KELUAR"}
+                          </span>
+                        </div>
+
+                        <span className="h-4 w-px shrink-0 bg-border" />
+
+                        <p className="min-w-0 flex-1 truncate text-sm text-text-secondary">
+                          <span className="font-mono">{trx.noTransaksi}</span>{" "}
+                          &middot; {formatDate(trx.createdAt)}
                         </p>
-                        <p className="truncate text-xs text-text-muted">
-                          {formatDate(trx.createdAt)}
+
+                        <span className="h-4 w-px shrink-0 bg-border" />
+
+                        <p className={`shrink-0 text-sm font-bold ${isSetor ? "text-success" : "text-danger"}`}>
+                          {isSetor ? "+ " : "- "}
+                          {formatCurrency(trx.jumlah)}
                         </p>
+
+                        <span className="h-4 w-px shrink-0 bg-border" />
+
+                        <button
+                          type="button"
+                          onClick={() => setKuitansiTrx(trx)}
+                          className="flex shrink-0 items-center gap-1 text-sm font-semibold text-primary transition-colors hover:text-primary-dark hover:underline"
+                        >
+                          <Receipt size={13} />
+                          Kwitansi
+                        </button>
                       </div>
-                      <p className={`shrink-0 text-sm font-bold ${isSetor ? "text-success" : "text-danger"}`}>
-                        {isSetor ? "+ " : "- "}
-                        {formatCurrency(trx.jumlah)}
-                      </p>
                     </motion.div>
                   );
                 })
               )}
             </motion.div>
 
-            <div className="p-4">
-              <button
+            <div className="relative p-4">
+              <motion.button
                 type="button"
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => router.push("/portal/riwayat")}
-                className="group flex w-full items-center justify-center gap-1.5 rounded-xl border border-border py-2.5 text-sm font-semibold text-text-secondary transition-colors hover:border-primary/40 hover:text-primary"
+                className="group flex w-full items-center justify-center gap-1.5 rounded-xl border border-border py-2.5 text-sm font-semibold text-text-secondary transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
               >
                 Lihat Semua Riwayat
                 <ArrowRight
                   size={14}
                   className="transition-transform duration-200 group-hover:translate-x-0.5"
                 />
-              </button>
+              </motion.button>
             </div>
           </motion.div>
         </div>
       )}
+
+      <KuitansiModal
+        transaksi={kuitansiTrx}
+        nasabah={profile}
+        tellerNama={kuitansiTrx?.processedBy?.nama ?? "-"}
+        onClose={() => setKuitansiTrx(null)}
+      />
     </Layout>
   );
 }

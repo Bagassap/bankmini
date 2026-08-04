@@ -5,13 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  ArrowRight,
   Bell,
   Calendar,
   CheckCircle2,
   ChevronDown,
-  Clock,
+  CreditCard,
   Eye,
-  Fingerprint,
   History,
   LayoutDashboard,
   LogOut,
@@ -27,6 +27,7 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { useLiveClock } from "@/hooks/useLiveClock";
 import { isAdminRole, isNasabahRole } from "@/lib/role";
+import { formatFullDateID, formatTime, getWibHour } from "@/lib/format";
 
 type MenuKey = "search" | "clock" | "notif" | "profile";
 
@@ -115,9 +116,12 @@ const ROLE_LABEL: Record<string, string> = {
   superadmin: "Super Admin",
   admin: "Admin",
   teller: "Teller",
+  co_teller: "Co Teller",
   siswa: "Siswa",
   guru: "Guru",
   umum: "Umum",
+  kelas: "Kelas",
+  wali_kelas: "Wali Kelas",
 };
 
 const dropdownMotion = {
@@ -176,25 +180,15 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   }
 
   const greeting = (() => {
-    const hour = now?.getHours() ?? 12;
+    const hour = now ? getWibHour(now) : 12;
     if (hour < 10) return "Selamat pagi";
     if (hour < 15) return "Selamat siang";
     if (hour < 18) return "Selamat sore";
     return "Selamat malam";
   })();
 
-  const shortDate = now
-    ? now.toLocaleDateString("id-ID", { day: "numeric", month: "short" })
-    : "—";
-  const fullDate = now
-    ? now.toLocaleDateString("id-ID", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      })
-    : "—";
-  const timeLabel = now ? now.toLocaleTimeString("id-ID") : "—:—:—";
+  const fullDate = now ? formatFullDateID(now) : "—";
+  const timeLabel = now ? formatTime(now) : "—:—:—";
 
   const initials = (user?.nama ?? "?").slice(0, 2).toUpperCase();
   const firstName = user?.nama?.split(" ")[0] ?? "Teller";
@@ -267,31 +261,36 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
       </div>
 
       <div className="relative hidden sm:block">
-        <button
+        <motion.button
           type="button"
           onClick={() => toggleMenu("clock")}
-          className={`flex items-center gap-2.5 rounded-2xl bg-background-card py-1.5 pr-3.5 pl-1.5 shadow-sm transition-colors hover:shadow-md ${
-            openMenu === "clock" ? "ring-2 ring-primary/25" : ""
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className={`relative flex items-center gap-2.5 overflow-hidden rounded-2xl bg-linear-to-br from-gradient-orange-from to-gradient-orange-to py-2 pr-4 pl-2 text-white shadow-sm shadow-orange-500/30 transition-shadow hover:shadow-md ${
+            openMenu === "clock" ? "ring-2 ring-orange-400/40" : ""
           }`}
         >
-          <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-primary to-primary-dark text-white shadow-sm">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 opacity-20 bg-[radial-gradient(circle,rgba(255,255,255,0.8)_1px,transparent_1px)] bg-size-[10px_10px]"
+          />
+          <span className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
             <Calendar size={15} />
             <motion.span
               animate={{ opacity: [1, 0.4, 1] }}
               transition={{ duration: 1.6, repeat: Infinity }}
-              className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-success ring-2 ring-background-card"
+              className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-success ring-2 ring-orange-500"
             />
           </span>
-          <span className="text-left leading-tight">
-            <span className="block text-[11px] font-semibold text-text-secondary">
-              {shortDate}
-            </span>
-            <span className="flex items-center gap-1 font-mono text-xs font-bold text-primary">
+          <span className="relative flex items-center gap-1.5 whitespace-nowrap">
+            <span className="text-xs font-bold text-white/90">{fullDate}</span>
+            <span className="text-white/40">&middot;</span>
+            <span className="flex items-center gap-1 font-mono text-sm font-extrabold tracking-tight text-white">
               {timeLabel}
-              <span className="text-[9px] font-bold text-text-muted">WIB</span>
+              <span className="text-[9px] font-bold text-white/70">WIB</span>
             </span>
           </span>
-        </button>
+        </motion.button>
 
         <AnimatePresence>
           {openMenu === "clock" && (
@@ -299,7 +298,7 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
               {...dropdownMotion}
               className="absolute top-full right-0 z-50 mt-2 w-72 overflow-hidden rounded-2xl bg-background-card shadow-lg ring-1 ring-border"
             >
-              <div className="relative overflow-hidden bg-linear-to-br from-primary to-primary-dark p-5 text-white">
+              <div className="relative overflow-hidden bg-linear-to-br from-gradient-orange-from to-gradient-orange-to p-5 text-white">
                 <div
                   aria-hidden
                   className="pointer-events-none absolute inset-0 opacity-20 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_1px,transparent_1px)] bg-size-[14px_14px]"
@@ -418,75 +417,113 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
             {openMenu === "profile" && (
               <motion.div
                 {...dropdownMotion}
-                className="absolute top-full right-0 z-50 mt-2 w-72 overflow-hidden rounded-2xl bg-background-card shadow-lg ring-1 ring-border"
+                className="absolute top-full right-0 z-50 mt-2 w-80 overflow-hidden rounded-2xl bg-background-card font-sans shadow-lg ring-1 ring-border"
               >
                 <div className="relative overflow-hidden bg-linear-to-br from-primary to-primary-dark p-5 text-white">
                   <div
                     aria-hidden
                     className="pointer-events-none absolute inset-0 opacity-20 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_1px,transparent_1px)] bg-size-[14px_14px]"
                   />
-                  <div className="pointer-events-none absolute -top-8 -right-8 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+                  <div className="pointer-events-none absolute -top-10 -right-10 h-28 w-28 rounded-full bg-white/10 blur-2xl" />
+                  <div className="pointer-events-none absolute -bottom-10 -left-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
                   <div className="relative flex items-center gap-3">
-                    <span className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/20 text-lg font-bold shadow-sm backdrop-blur-sm">
+                    <motion.span
+                      whileHover={{ scale: 1.08, rotate: 4 }}
+                      className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-lg font-bold shadow-sm backdrop-blur-sm"
+                    >
                       {initials}
                       <motion.span
                         animate={{ opacity: [1, 0.4, 1] }}
                         transition={{ duration: 1.6, repeat: Infinity }}
                         className="absolute -right-0.5 -bottom-0.5 h-4 w-4 rounded-full bg-success ring-2 ring-primary"
                       />
-                    </span>
+                    </motion.span>
                     <div className="min-w-0">
                       <p className="truncate text-base font-bold">{user?.nama ?? "Teller"}</p>
                       <p className="truncate text-xs text-white/70">
                         @{user?.username ?? "-"}
                       </p>
-                      <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold backdrop-blur-sm">
-                        <CheckCircle2 size={10} />
-                        Online sekarang
-                      </span>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold backdrop-blur-sm">
+                          <ShieldCheck size={10} />
+                          {roleLabel}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-success/30 px-2 py-0.5 text-[10px] font-bold backdrop-blur-sm">
+                          <motion.span
+                            animate={{ opacity: [1, 0.4, 1] }}
+                            transition={{ duration: 1.6, repeat: Infinity }}
+                            className="h-1.5 w-1.5 rounded-full bg-success"
+                          />
+                          Online
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 p-3">
-                  <div className="rounded-xl bg-primary/10 p-2.5">
-                    <p className="flex items-center gap-1 text-[10px] font-semibold text-primary">
-                      <ShieldCheck size={11} />
-                      Role
-                    </p>
-                    <p className="mt-0.5 truncate text-xs font-bold text-text-primary">
-                      {roleLabel}
-                    </p>
+                <div className="space-y-2 p-3">
+                  <p className="flex items-center gap-1.5 px-1 text-[11px] font-bold tracking-wide text-text-muted uppercase">
+                    <Sparkles size={11} className="text-primary" />
+                    Ringkasan Akun
+                  </p>
+
+                  <div className="relative overflow-hidden rounded-xl bg-linear-to-r from-primary/10 to-success/10 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                          <UserCircle2 size={15} />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-semibold text-text-secondary">
+                            Username
+                          </p>
+                          <p className="truncate text-xs font-bold text-text-primary">
+                            {user?.username ?? "-"}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="h-8 w-px shrink-0 bg-border" />
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-success/15 text-success">
+                          {user?.noRekening ? <CreditCard size={15} /> : <ShieldCheck size={15} />}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-semibold text-text-secondary">
+                            {user?.noRekening ? "No Rekening" : "Role"}
+                          </p>
+                          <p
+                            className={`truncate text-xs font-bold text-text-primary ${
+                              user?.noRekening ? "font-mono" : ""
+                            }`}
+                          >
+                            {user?.noRekening ?? roleLabel}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="rounded-xl bg-success/10 p-2.5">
-                    <p className="flex items-center gap-1 text-[10px] font-semibold text-success">
-                      <CheckCircle2 size={11} />
-                      Status
-                    </p>
-                    <p className="mt-0.5 truncate text-xs font-bold text-text-primary">Aktif</p>
-                  </div>
-                  <div className="rounded-xl bg-warning/10 p-2.5">
-                    <p className="flex items-center gap-1 text-[10px] font-semibold text-warning">
-                      <UserCircle2 size={11} />
-                      Username
-                    </p>
-                    <p className="mt-0.5 truncate text-xs font-bold text-text-primary">
-                      {user?.username ?? "-"}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-background-hover p-2.5">
-                    <p className="flex items-center gap-1 text-[10px] font-semibold text-text-secondary">
-                      <Fingerprint size={11} />
-                      ID Akun
-                    </p>
-                    <p className="mt-0.5 truncate font-mono text-xs font-bold text-text-primary">
-                      {user?.id ? user.id.slice(0, 8) : "-"}
-                    </p>
-                  </div>
+
+                  {isNasabahRole(user) && (
+                    <Link
+                      href="/portal/profil"
+                      onClick={() => setOpenMenu(null)}
+                      className="group flex items-center justify-between gap-2 rounded-xl border border-border px-3 py-2.5 text-xs font-semibold text-text-secondary transition-colors hover:border-primary/40 hover:text-primary"
+                    >
+                      <span className="flex items-center gap-2">
+                        <UserCircle2 size={14} />
+                        Lihat Profil Saya
+                      </span>
+                      <ArrowRight
+                        size={13}
+                        className="transition-transform duration-200 group-hover:translate-x-0.5"
+                      />
+                    </Link>
+                  )}
                 </div>
 
                 <div className="border-t border-border p-3">
                   <motion.button
+                    whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.97 }}
                     onClick={handleLogout}
                     className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-danger/10 px-3 py-2.5 text-xs font-bold text-danger transition-colors hover:bg-danger/20"

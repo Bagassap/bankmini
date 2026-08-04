@@ -11,7 +11,7 @@ export class StaffOnlyGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
     const user = request.user as JwtPayload | undefined;
-    if (user?.accountType !== 'staff') {
+    if (user?.accountType !== 'staff' && !user?.linkedStaff) {
       throw new ForbiddenException(
         'Hanya staf (admin/teller) yang dapat mengakses resource ini',
       );

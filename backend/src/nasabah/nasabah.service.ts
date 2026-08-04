@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   HttpException,
   Injectable,
   InternalServerErrorException,
@@ -9,6 +10,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import { JenisNasabah, Nasabah, Prisma, StatusNasabah } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { wibDateParts } from '../common/wib-date';
 
 export interface CreateNasabahInput {
   nama: string;
@@ -131,6 +133,14 @@ export class NasabahService {
     }
   }
 
+  async findByNoRekeningOrNull(noRekening: string): Promise<Nasabah | null> {
+    try {
+      return await this.prisma.nasabah.findUnique({ where: { noRekening } });
+    } catch (error) {
+      throw new InternalServerErrorException('Gagal mencari nasabah');
+    }
+  }
+
   async updateLastLogin(id: string): Promise<void> {
     try {
       await this.prisma.nasabah.update({
@@ -147,10 +157,13 @@ export class NasabahService {
   private async generateNoRekening(
     tx: PrismaClientOrTx = this.prisma,
   ): Promise<string> {
-    const now = new Date();
-    const yy = String(now.getFullYear()).slice(-2);
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
+    // No Rekening carries the registration date - must be the WIB calendar
+    // day, not the server's own (UTC) system date, otherwise accounts opened
+    // between 00:00-07:00 WIB would be stamped with the previous day.
+    const { year, month, day } = wibDateParts();
+    const yy = String(year).slice(-2);
+    const mm = String(month + 1).padStart(2, '0');
+    const dd = String(day).padStart(2, '0');
     const prefix = `BM${yy}${mm}${dd}`;
 
     const last = await tx.nasabah.findFirst({
@@ -286,6 +299,66 @@ export class NasabahService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Gagal menghapus nasabah');
+    }
+  }
+
+  async getKelasSummary(waliKelasId: string) {
+    try {
+      const waliKelas = await this.prisma.nasabah.findUnique({
+        where: { id: waliKelasId },
+      });
+      if (!waliKelas) {
+        throw new NotFoundException('Akun tidak ditemukan');
+      }
+      if (waliKelas.jenisNasabah !== 'wali_kelas' || !waliKelas.kelas) {
+        throw new ForbiddenException(
+          'Hanya wali kelas yang dapat mengakses ringkasan saldo kelas',
+        );
+      }
+
+      const [kelasAccount, siswaList] = await this.prisma.$transaction([
+        this.prisma.nasabah.findFirst({
+          where: { jenisNasabah: 'kelas', kelas: waliKelas.kelas },
+        }),
+        this.prisma.nasabah.findMany({
+          where: { jenisNasabah: 'siswa', kelas: waliKelas.kelas },
+          orderBy: { nama: 'asc' },
+        }),
+      ]);
+
+      const siswaSaldoTotal = siswaList.reduce(
+        (sum, siswa) => sum + Number(siswa.saldo),
+        0,
+      );
+      const kelasSaldo = kelasAccount ? Number(kelasAccount.saldo) : 0;
+
+      return {
+        kelas: waliKelas.kelas,
+        totalSaldo: kelasSaldo + siswaSaldoTotal,
+        kelasAccount: kelasAccount
+          ? {
+              id: kelasAccount.id,
+              noRekening: kelasAccount.noRekening,
+              nama: kelasAccount.nama,
+              saldo: kelasAccount.saldo,
+            }
+          : null,
+        totalSiswa: siswaList.length,
+        totalSaldoSiswa: siswaSaldoTotal,
+        siswa: siswaList.map((siswa) => ({
+          id: siswa.id,
+          noRekening: siswa.noRekening,
+          nama: siswa.nama,
+          nis: siswa.nis,
+          saldo: siswa.saldo,
+          status: siswa.status,
+        })),
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException(
+        'Gagal mengambil ringkasan saldo kelas',
+      );
     }
   }
 

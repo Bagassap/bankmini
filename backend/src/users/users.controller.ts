@@ -17,6 +17,7 @@ import { StaffOnlyGuard } from '../auth/staff-only.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { resolveStaffId } from '../auth/resolve-staff-id';
 import type { JwtPayload } from '../auth/jwt.strategy';
 
 @Controller('users')
@@ -47,7 +48,7 @@ export class UsersController {
 
   @Delete(':id')
   delete(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
-    if (user.id === id) {
+    if (resolveStaffId(user) === id) {
       throw new BadRequestException('Tidak dapat menghapus akun sendiri');
     }
     return this.usersService.delete(id);

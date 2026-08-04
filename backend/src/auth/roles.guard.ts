@@ -23,9 +23,12 @@ export class RolesGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user = request.user as JwtPayload | undefined;
 
-    if (user?.accountType !== 'staff' || !requiredRoles.includes(user.role as Role)) {
+    const effectiveRole =
+      user?.accountType === 'staff' ? user.role : user?.linkedStaff?.role;
+
+    if (!effectiveRole || !requiredRoles.includes(effectiveRole as Role)) {
       throw new ForbiddenException(
-        `Role ${user?.role ?? 'tidak dikenal'} tidak memiliki akses ke resource ini`,
+        `Role ${effectiveRole ?? 'tidak dikenal'} tidak memiliki akses ke resource ini`,
       );
     }
     return true;

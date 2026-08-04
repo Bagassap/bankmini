@@ -78,6 +78,23 @@ nav::-webkit-scrollbar {
   display: none;
 }
 
+/* Print only the element marked .print-area (e.g. a kuitansi/receipt),
+   hiding the rest of the app chrome when the browser print dialog opens. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: fixed;
+    inset: 0;
+    padding: 24px;
+  }
+}
+
 @keyframes float-slow {
   0%,
   100% {

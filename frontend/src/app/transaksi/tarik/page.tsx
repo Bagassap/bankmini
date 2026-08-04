@@ -1,21 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import toast from "react-hot-toast";
+import { motion } from "framer-motion";
 import { AlertTriangle, Banknote, ClipboardList, Wallet } from "lucide-react";
 import Layout from "@/components/Layout";
 import { InformasiRekeningCard } from "@/components/transaksi/InformasiRekeningCard";
+import { KuitansiModal } from "@/components/transaksi/KuitansiModal";
 import { TransaksiRightPanel } from "@/components/transaksi/TransaksiRightPanel";
-import { TransaksiSuccessPanel } from "@/components/transaksi/TransaksiSuccessPanel";
+import {
+  TransaksiResultModal,
+  type TransaksiResultState,
+} from "@/components/transaksi/TransaksiResultModal";
 import { useNasabahLookup } from "@/hooks/useNasabahLookup";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatDigitsID } from "@/lib/format";
 import { terbilangRupiah } from "@/lib/terbilang";
 import { TARIK_META } from "@/lib/transaksiMeta";
 import { useAuthStore } from "@/store/authStore";
-import type { Transaksi } from "@/lib/types";
+import type { Nasabah, Transaksi } from "@/lib/types";
 
 const inputClass =
   "w-full rounded-xl border border-transparent bg-background-hover px-3 py-2.5 text-sm text-text-primary transition-shadow focus:border-primary focus:bg-background-card focus:outline-none focus:ring-2 focus:ring-primary/20";
@@ -27,15 +30,20 @@ export default function TarikTunaiPage() {
     setNoRekening,
     nasabah,
     searching,
+    suggestions,
+    suggestionsLoading,
+    selectSuggestion,
     handleSearch,
     reset: resetLookup,
   } = useNasabahLookup();
 
   const [jumlah, setJumlah] = useState("");
-  const [sumberDana, setSumberDana] = useState(TARIK_META.sumberOptions[0]);
+  const [sumberDana, setSumberDana] = useState("");
   const [keterangan, setKeterangan] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<Transaksi | null>(null);
+  const [result, setResult] = useState<TransaksiResultState | null>(null);
+  const [receiptNasabah, setReceiptNasabah] = useState<Nasabah | null>(null);
+  const [showKuitansi, setShowKuitansi] = useState(false);
 
   const jumlahNumber = Number(jumlah) || 0;
   const insufficientFunds = !!nasabah && jumlahNumber > Number(nasabah.saldo);
@@ -44,7 +52,7 @@ export default function TarikTunaiPage() {
     resetLookup();
     setJumlah("");
     setKeterangan("");
-    setSumberDana(TARIK_META.sumberOptions[0]);
+    setSumberDana("");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -61,11 +69,14 @@ export default function TarikTunaiPage() {
         keterangan: combinedKeterangan || undefined,
         processedById: user.id,
       });
-      setResult(data);
-      toast.success("Tarik berhasil");
+      setResult({ status: "success", data });
+      setReceiptNasabah(nasabah);
       resetForm();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Gagal melakukan tarik"));
+      setResult({
+        status: "error",
+        message: getErrorMessage(error, "Gagal melakukan tarik"),
+      });
     } finally {
       setSubmitting(false);
     }
@@ -81,6 +92,9 @@ export default function TarikTunaiPage() {
             onSubmit={handleSearch}
             searching={searching}
             nasabah={nasabah}
+            suggestions={suggestions}
+            suggestionsLoading={suggestionsLoading}
+            onSelectSuggestion={selectSuggestion}
           />
 
           <motion.div
@@ -143,12 +157,11 @@ export default function TarikTunaiPage() {
                   >
                     <span className="text-lg font-bold text-text-muted">Rp</span>
                     <input
-                      type="number"
-                      min="1"
-                      step="1"
+                      type="text"
+                      inputMode="numeric"
                       required
-                      value={jumlah}
-                      onChange={(e) => setJumlah(e.target.value)}
+                      value={formatDigitsID(jumlah)}
+                      onChange={(e) => setJumlah(e.target.value.replace(/\D/g, ""))}
                       placeholder="0"
                       className="w-full min-w-0 bg-transparent text-2xl font-bold text-text-primary focus:outline-none"
                     />
@@ -189,17 +202,13 @@ export default function TarikTunaiPage() {
                       <TARIK_META.sumberIcon size={12} className="text-primary" />
                       {TARIK_META.sumberLabel}
                     </label>
-                    <select
+                    <input
+                      type="text"
                       value={sumberDana}
                       onChange={(e) => setSumberDana(e.target.value)}
+                      placeholder={TARIK_META.sumberOptions.join(" / ")}
                       className={inputClass}
-                    >
-                      {TARIK_META.sumberOptions.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </div>
                   <div>
                     <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
@@ -230,7 +239,17 @@ export default function TarikTunaiPage() {
         />
       </div>
 
-      <AnimatePresence>{result && <TransaksiSuccessPanel result={result} />}</AnimatePresence>
+      <TransaksiResultModal
+        result={result}
+        onClose={() => setResult(null)}
+        onPrintReceipt={() => setShowKuitansi(true)}
+      />
+      <KuitansiModal
+        transaksi={showKuitansi && result?.status === "success" ? result.data : null}
+        nasabah={receiptNasabah}
+        tellerNama={user?.nama ?? "-"}
+        onClose={() => setShowKuitansi(false)}
+      />
     </Layout>
   );
 }

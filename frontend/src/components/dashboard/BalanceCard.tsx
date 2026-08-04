@@ -12,14 +12,13 @@ import {
   Plus,
   RefreshCw,
   School,
-  TrendingDown,
-  TrendingUp,
+  ShieldCheck,
   Users,
   Wallet,
 } from "lucide-react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { AnimatedCurrency } from "./AnimatedCurrency";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatTimeShort } from "@/lib/format";
 import type { JenisNasabah, Transaksi } from "@/lib/types";
 
 const JENIS_COLOR: Record<JenisNasabah, string> = {
@@ -27,6 +26,7 @@ const JENIS_COLOR: Record<JenisNasabah, string> = {
   guru: "#f59e0b",
   umum: "#10b981",
   kelas: "#8b5cf6",
+  wali_kelas: "#0d9488",
 };
 
 const JENIS_LABEL: Record<JenisNasabah, string> = {
@@ -34,6 +34,7 @@ const JENIS_LABEL: Record<JenisNasabah, string> = {
   guru: "Guru",
   umum: "Umum",
   kelas: "Kelas",
+  wali_kelas: "Wali Kelas",
 };
 
 const JENIS_ICON: Record<JenisNasabah, typeof GraduationCap> = {
@@ -41,6 +42,7 @@ const JENIS_ICON: Record<JenisNasabah, typeof GraduationCap> = {
   guru: BookUser,
   umum: Users,
   kelas: School,
+  wali_kelas: ShieldCheck,
 };
 
 const statRowVariants = {
@@ -54,7 +56,7 @@ const statItemVariants = {
 };
 
 export function BalanceCard({
-  kasSaatIni,
+  totalSaldo,
   totalTransaksiHariIni,
   totalSetoranHariIni,
   totalPenarikanHariIni,
@@ -71,7 +73,7 @@ export function BalanceCard({
   primaryActionLabel = "Transaksi Baru",
   nasabahHref = "/nasabah",
 }: {
-  kasSaatIni: number;
+  totalSaldo: number;
   totalTransaksiHariIni: number;
   totalSetoranHariIni: number;
   totalPenarikanHariIni: number;
@@ -88,12 +90,8 @@ export function BalanceCard({
   primaryActionLabel?: string;
   nasabahHref?: string;
 }) {
-  const isSurplus = kasSaatIni >= 0;
   const tarikPercent = 100 - setorPercent;
-  const updatedAt = new Date().toLocaleTimeString("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const updatedAt = formatTimeShort(new Date());
   const insightText =
     totalTransaksiHariIni === 0
       ? "Belum ada transaksi tercatat hari ini"
@@ -121,7 +119,7 @@ export function BalanceCard({
               <Wallet size={14} />
             </span>
             <p className="text-xs font-bold tracking-widest text-text-muted uppercase">
-              Saldo Kas Saat Ini
+              Total Saldo Nasabah
             </p>
           </div>
           {onRefresh && (
@@ -149,7 +147,7 @@ export function BalanceCard({
         </div>
 
         <AnimatedCurrency
-          value={kasSaatIni}
+          value={totalSaldo}
           className="mt-2 block text-3xl font-bold text-text-primary sm:text-4xl"
         />
 
@@ -161,13 +159,9 @@ export function BalanceCard({
             </span>
             {totalTransaksiHariIni} transaksi tercatat hari ini
           </span>
-          <span
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
-              isSurplus ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
-            }`}
-          >
-            {isSurplus ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
-            {isSurplus ? "Surplus" : "Defisit"} hari ini
+          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+            <Users size={11} />
+            {totalNasabah} nasabah
           </span>
         </div>
 

@@ -13,6 +13,7 @@ enum Role {
   superadmin
   admin
   teller
+  co_teller
 }
 
 enum JenisNasabah {
@@ -54,7 +55,15 @@ model User {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  transaksiProcessed Transaksi[] @relation("ProcessedBy")
+  transaksiProcessed                 Transaksi[]                 @relation("ProcessedBy")
+  transaksiEdited                    Transaksi[]                 @relation("EditedBy")
+  simpananPokokProcessed             SimpananPokok[]             @relation("SimpananPokokProcessedBy")
+  simpananWajibProcessed             SimpananWajib[]             @relation("SimpananWajibProcessedBy")
+  simpananHariRayaProcessed          SimpananHariRaya[]          @relation("SimpananHariRayaProcessedBy")
+  simpananHariRayaPencairanProcessed SimpananHariRayaPencairan[] @relation("SimpananHariRayaPencairanProcessedBy")
+  simpananHariRayaAnggotaProcessed   SimpananHariRayaAnggota[]   @relation("SimpananHariRayaAnggotaProcessedBy")
+  piutangProcessed                   Piutang[]                   @relation("PiutangProcessedBy")
+  piutangAngsuranProcessed           PiutangAngsuran[]           @relation("PiutangAngsuranProcessedBy")
 
   @@map("users")
 }
@@ -83,7 +92,13 @@ model Nasabah {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
-  transaksi Transaksi[]
+  transaksi                 Transaksi[]
+  simpananPokok             SimpananPokok?
+  simpananWajib             SimpananWajib[]
+  simpananHariRaya          SimpananHariRaya[]
+  simpananHariRayaPencairan SimpananHariRayaPencairan[]
+  simpananHariRayaAnggota   SimpananHariRayaAnggota[]
+  piutang                   Piutang[]
 
   @@map("nasabah")
 }
@@ -101,6 +116,9 @@ model Transaksi {
   processedById  String
   processedBy    User           @relation("ProcessedBy", fields: [processedById], references: [id])
   createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  editedById     String?
+  editedBy       User?          @relation("EditedBy", fields: [editedById], references: [id])
 
   @@map("transaksi")
 }
@@ -115,4 +133,174 @@ model Session {
 
   @@index([accountId])
   @@map("sessions")
+}
+
+// One-time membership deposit, fixed nominal for every member, hence the
+// @unique on nasabahId - a second entry for the same nasabah is a bug, not a
+// legitimate re-deposit.
+model SimpananPokok {
+  id            String   @id @default(uuid())
+  nasabahId     String   @unique
+  nasabah       Nasabah  @relation(fields: [nasabahId], references: [id])
+  nominal       Decimal  @db.Decimal(15, 2)
+  tanggalSetor  DateTime @default(now())
+  processedById String
+  processedBy   User     @relation("SimpananPokokProcessedBy", fields: [processedById], references: [id])
+  createdAt     DateTime @default(now())
+
+  @@map("simpanan_pokok")
+}
+
+// Recurring membership deposit, accumulates over time - unlike SimpananPokok
+// this can have many rows per nasabah (one per deposit).
+model SimpananWajib {
+  id            String   @id @default(uuid())
+  nasabahId     String
+  nasabah       Nasabah  @relation(fields: [nasabahId], references: [id])
+  nominal       Decimal  @db.Decimal(15, 2)
+  periode       String
+  tanggalSetor  DateTime @default(now())
+  processedById String
+  processedBy   User     @relation("SimpananWajibProcessedBy", fields: [processedById], references: [id])
+  createdAt     DateTime @default(now())
+
+  @@index([nasabahId])
+  @@map("simpanan_wajib")
+}
+
+// Recurring deposit toward a Idul Fitri payout cycle (free nominal, target
+// ~10 deposits before cashing out) - unlike SimpananWajib this cycle can be
+// "cashed out" (see SimpananHariRayaPencairan) and start over, so ringkasan
+// queries only count deposits made after the nasabah's most recent payout.
+model SimpananHariRaya {
+  id            String   @id @default(uuid())
+  nasabahId     String
+  nasabah       Nasabah  @relation(fields: [nasabahId], references: [id])
+  nominal       Decimal  @db.Decimal(15, 2)
+  periode       String
+  tanggalSetor  DateTime @default(now())
+  processedById String
+  processedBy   User     @relation("SimpananHariRayaProcessedBy", fields: [processedById], references: [id])
+  createdAt     DateTime @default(now())
+
+  @@index([nasabahId])
+  @@map("simpanan_hari_raya")
+}
+
+// A payout ("pencairan") event closing out the current Simpanan Hari Raya
+// cycle - deposits made after `tanggalCair` belong to the next cycle.
+model SimpananHariRayaPencairan {
+  id             String   @id @default(uuid())
+  nasabahId      String
+  nasabah        Nasabah  @relation(fields: [nasabahId], references: [id])
+  totalDicairkan Decimal  @db.Decimal(15, 2)
+  jumlahSetoran  Int
+  tanggalCair    DateTime @default(now())
+  processedById  String
+  processedBy    User     @relation("SimpananHariRayaPencairanProcessedBy", fields: [processedById], references: [id])
+  createdAt      DateTime @default(now())
+
+  @@index([nasabahId])
+  @@map("simpanan_hari_raya_pencairan")
+}
+
+// Registers a nasabah as an active Simpanan Hari Raya saver for the current
+// cycle and locks their monthly nominal - "Setor" afterward never asks for
+// an amount, it just uses whatever was decided here. Scoped to the current
+// cycle the same way deposits are (see SimpananHariRaya): after a payout, a
+// nasabah must be registered again before they can deposit into the new
+// cycle, since the nominal may change year to year.
+model SimpananHariRayaAnggota {
+  id            String   @id @default(uuid())
+  nasabahId     String
+  nasabah       Nasabah  @relation(fields: [nasabahId], references: [id])
+  nominal       Decimal  @db.Decimal(15, 2)
+  terdaftarPada DateTime @default(now())
+  processedById String
+  processedBy   User     @relation("SimpananHariRayaAnggotaProcessedBy", fields: [processedById], references: [id])
+  createdAt     DateTime @default(now())
+
+  @@index([nasabahId])
+  @@map("simpanan_hari_raya_anggota")
+}
+
+// Bulanan: jasa is a flat fee paid in full every month alongside a
+// straight-line pokok slice (pokok / tenor). Berkala: jasa-only payments for
+// months 1..(tenor-1), then a single balloon payment (full pokok + jasa) in
+// the final month - pokok stays untouched until then.
+enum JenisPiutang {
+  bulanan
+  berkala
+}
+
+// What a given PiutangAngsuran row actually paid off - drives how much of
+// it counts toward pokok (see Piutang.nominalAngsuranPokokPerBulan) versus
+// being pure jasa that never reduces saldo.
+enum JenisPembayaranAngsuran {
+  pokok_dan_jasa
+  jasa_saja
+  pelunasan
+}
+
+// A loan given to a nasabah. `pinjamanKe` is a snapshot of "which loan is
+// this for this nasabah" (1st, 2nd, ...), computed once at creation time
+// from that nasabah's prior Piutang count (across all cycles, settled or
+// not) - it is never recomputed, so it stays a stable historical record
+// even if earlier loans are long settled.
+//
+// persentaseJasa/persentaseAdm/nominalJasaFlat/nominalAngsuranPokokPerBulan
+// are all snapshotted at creation time from the product-decision constants
+// in PiutangService, not read live from a config - so an existing loan's
+// terms never shift even if those constants change later for new loans.
+model Piutang {
+  id                           String       @id @default(uuid())
+  nasabahId                    String
+  nasabah                      Nasabah      @relation(fields: [nasabahId], references: [id])
+  pinjamanKe                   Int
+  jenisPiutang                 JenisPiutang
+  jumlahPinjaman               Decimal      @db.Decimal(15, 2)
+  tenor                        Int
+  persentaseJasa               Decimal      @db.Decimal(5, 2)
+  persentaseAdm                Decimal      @db.Decimal(5, 2)
+  // Flat jasa anggota charged every month regardless of jenis (never
+  // divided by tenor) - see JenisPiutang doc comment.
+  nominalJasaFlat              Decimal      @db.Decimal(15, 2)
+  // Charged once at pencairan, not part of the monthly schedule.
+  provisiAdm                   Decimal      @db.Decimal(15, 2)
+  // Only set for `bulanan` (jumlahPinjaman / tenor) - null for `berkala`,
+  // where pokok is repaid in a single lump sum in the final month instead.
+  nominalAngsuranPokokPerBulan Decimal?     @db.Decimal(15, 2)
+  keterangan                   String?
+  tanggalPinjam                DateTime     @default(now())
+  processedById                String
+  processedBy                  User         @relation("PiutangProcessedBy", fields: [processedById], references: [id])
+  createdAt                    DateTime     @default(now())
+
+  angsuran PiutangAngsuran[]
+
+  @@index([nasabahId])
+  @@map("piutang")
+}
+
+// A single installment payment ("angsuran") against a Piutang. `bulanKe` is
+// the sequential installment number (1..tenor) - the next one is always
+// `angsuran.length + 1` for that Piutang, so payments can't be recorded out
+// of order or skipped. `nominal` and `jenisPembayaran` are computed and
+// locked in server-side at creation time (see PiutangService.createAngsuran)
+// from the parent Piutang's jenisPiutang + bulanKe, never accepted from the
+// client, so a teller can't mis-key an amount.
+model PiutangAngsuran {
+  id              String                  @id @default(uuid())
+  piutangId       String
+  piutang         Piutang                 @relation(fields: [piutangId], references: [id])
+  bulanKe         Int
+  jenisPembayaran JenisPembayaranAngsuran
+  nominal         Decimal                 @db.Decimal(15, 2)
+  tanggalBayar    DateTime                @default(now())
+  processedById   String
+  processedBy     User                    @relation("PiutangAngsuranProcessedBy", fields: [processedById], references: [id])
+  createdAt       DateTime                @default(now())
+
+  @@index([piutangId])
+  @@map("piutang_angsuran")
 }

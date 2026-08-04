@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import toast from "react-hot-toast";
+import { notify } from "@/store/notifyStore";
 import {
   AlertTriangle,
   ArrowUpDown,
@@ -11,7 +11,8 @@ import {
   Cake,
   Calendar,
   CheckCircle2,
-  CreditCard,
+  ChevronLeft,
+  ChevronRight,
   Download,
   Eye,
   Filter,
@@ -38,7 +39,7 @@ import Layout from "@/components/Layout";
 import { AnimatedCurrency } from "@/components/dashboard/AnimatedCurrency";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, formatDateOnlyID } from "@/lib/format";
 import type {
   JenisKelamin,
   JenisNasabah,
@@ -113,6 +114,7 @@ const jenisLabel: Record<JenisNasabah, string> = {
   guru: "Guru",
   umum: "Umum",
   kelas: "Kelas",
+  wali_kelas: "Wali Kelas",
 };
 
 const JENIS_COLOR: Record<JenisNasabah, string> = {
@@ -120,6 +122,7 @@ const JENIS_COLOR: Record<JenisNasabah, string> = {
   guru: "#f59e0b",
   umum: "#10b981",
   kelas: "#8b5cf6",
+  wali_kelas: "#0d9488",
 };
 
 const JENIS_ICON: Record<JenisNasabah, typeof GraduationCap> = {
@@ -127,6 +130,7 @@ const JENIS_ICON: Record<JenisNasabah, typeof GraduationCap> = {
   guru: BookUser,
   umum: Users,
   kelas: School,
+  wali_kelas: ShieldCheck,
 };
 
 const HEALTH_TIER_META: Record<
@@ -165,6 +169,8 @@ const HEALTH_TIER_META: Record<
 const inputClass =
   "w-full rounded-xl border border-border bg-background-hover px-3 py-2.5 text-sm text-text-primary transition-shadow focus:border-primary focus:bg-background-card focus:outline-none focus:ring-2 focus:ring-primary/20";
 const labelClass = "mb-1.5 block text-xs font-semibold text-text-secondary";
+
+const PAGE_SIZE = 10;
 
 const listVariants = {
   hidden: {},
@@ -308,6 +314,7 @@ export function NasabahPageContent() {
   const [nasabahList, setNasabahList] = useState<Nasabah[]>([]);
   const [loading, setLoading] = useState(true);
   const [jenisFilter, setJenisFilter] = useState<JenisNasabah | "">("");
+  const [kelasFilter, setKelasFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusNasabah | "">("");
   const [sortBy, setSortBy] = useState<"terbaru" | "nama" | "saldo">("terbaru");
   const [search, setSearch] = useState("");
@@ -319,6 +326,7 @@ export function NasabahPageContent() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState<AddForm>(initialAddForm);
   const [addSaving, setAddSaving] = useState(false);
+  const [page, setPage] = useState(1);
 
   async function loadNasabah() {
     setLoading(true);
@@ -337,7 +345,7 @@ export function NasabahPageContent() {
           : data;
       setNasabahList(scoped);
     } catch (error) {
-      toast.error(getErrorMessage(error, "Gagal memuat data nasabah"));
+      notify.error(getErrorMessage(error, "Gagal memuat data nasabah"));
     } finally {
       setLoading(false);
     }
@@ -348,7 +356,12 @@ export function NasabahPageContent() {
     const initialSearch = params.get("search");
     if (initialSearch) setSearch(initialSearch);
     const initialJenis = params.get("jenis");
-    if (initialJenis === "siswa" || initialJenis === "guru" || initialJenis === "kelas") {
+    if (
+      initialJenis === "siswa" ||
+      initialJenis === "guru" ||
+      initialJenis === "kelas" ||
+      initialJenis === "wali_kelas"
+    ) {
       setActiveTab("sekolah");
       setJenisFilter(initialJenis);
     } else if (initialJenis === "umum") {
@@ -368,16 +381,43 @@ export function NasabahPageContent() {
     return () => clearTimeout(timeout);
   }, [activeTab, jenisFilter, search]);
 
+  // Distinct kelas values among siswa currently loaded, for the class
+  // picker below - lets a teacher jump straight to one class instead of
+  // paging through all students in kelas-grouped order.
+  const kelasOptions = useMemo(() => {
+    const set = new Set<string>();
+    nasabahList.forEach((n) => {
+      if (n.jenisNasabah === "siswa" && n.kelas) set.add(n.kelas);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [nasabahList]);
+
   const displayList = useMemo(() => {
-    const filtered = statusFilter
-      ? nasabahList.filter((n) => n.status === statusFilter)
-      : nasabahList;
-    return [...filtered].sort((a, b) => {
+    const filtered = nasabahList
+      .filter((n) => (statusFilter ? n.status === statusFilter : true))
+      .filter((n) =>
+        jenisFilter === "siswa" && kelasFilter ? n.kelas === kelasFilter : true,
+      );
+    const sorted = [...filtered].sort((a, b) => {
       if (sortBy === "nama") return a.nama.localeCompare(b.nama);
       if (sortBy === "saldo") return Number(b.saldo) - Number(a.saldo);
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [nasabahList, statusFilter, sortBy]);
+    // Group siswa by kelas - JS's sort is stable, so re-sorting by kelas on
+    // top of the result above keeps each kelas group internally ordered by
+    // whatever sortBy the user picked.
+    if (jenisFilter === "siswa") {
+      return sorted.sort((a, b) => (a.kelas ?? "").localeCompare(b.kelas ?? ""));
+    }
+    return sorted;
+  }, [nasabahList, statusFilter, sortBy, jenisFilter, kelasFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(displayList.length / PAGE_SIZE));
+  const pagedList = displayList.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab, jenisFilter, kelasFilter, search, statusFilter, sortBy]);
 
   const totalCount = displayList.length;
   const aktifCount = displayList.filter((n) => n.status === "aktif").length;
@@ -422,11 +462,13 @@ export function NasabahPageContent() {
   function switchTab(tab: Tab) {
     setActiveTab(tab);
     setJenisFilter("");
+    setKelasFilter("");
     setSelected(new Set());
   }
 
   function clearFilters() {
     setJenisFilter("");
+    setKelasFilter("");
     setStatusFilter("");
   }
 
@@ -463,9 +505,9 @@ export function NasabahPageContent() {
     );
     const failed = results.filter((r) => r.status === "rejected").length;
     if (failed > 0) {
-      toast.error(`${failed} nasabah gagal dihapus`);
+      notify.error(`${failed} nasabah gagal dihapus`);
     } else {
-      toast.success("Nasabah terpilih berhasil dihapus");
+      notify.success("Nasabah terpilih berhasil dihapus");
     }
     setSelected(new Set());
     loadNasabah();
@@ -522,11 +564,11 @@ export function NasabahPageContent() {
         jenisKelamin: addForm.jenisKelamin || undefined,
         tanggalLahir: addForm.tanggalLahir || undefined,
       });
-      toast.success("Nasabah berhasil ditambahkan");
+      notify.success("Nasabah berhasil ditambahkan");
       closeAdd();
       loadNasabah();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Gagal menambahkan nasabah"));
+      notify.error(getErrorMessage(error, "Gagal menambahkan nasabah"));
     } finally {
       setAddSaving(false);
     }
@@ -554,11 +596,11 @@ export function NasabahPageContent() {
         jenisKelamin: editForm.jenisKelamin || undefined,
         status: editForm.status,
       });
-      toast.success("Nasabah berhasil diperbarui");
+      notify.success("Nasabah berhasil diperbarui");
       closeEdit();
       loadNasabah();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Gagal memperbarui nasabah"));
+      notify.error(getErrorMessage(error, "Gagal memperbarui nasabah"));
     } finally {
       setSaving(false);
     }
@@ -570,10 +612,10 @@ export function NasabahPageContent() {
     }
     try {
       await api.delete(`/nasabah/${nasabah.id}`);
-      toast.success("Nasabah berhasil dihapus");
+      notify.success("Nasabah berhasil dihapus");
       loadNasabah();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Gagal menghapus nasabah"));
+      notify.error(getErrorMessage(error, "Gagal menghapus nasabah"));
     }
   }
 
@@ -761,6 +803,7 @@ export function NasabahPageContent() {
                   { value: "siswa" as const, label: "Siswa", icon: GraduationCap },
                   { value: "guru" as const, label: "Guru", icon: BookUser },
                   { value: "kelas" as const, label: "Kelas", icon: School },
+                  { value: "wali_kelas" as const, label: "Wali Kelas", icon: ShieldCheck },
                 ]
               ).map((opt) => {
                 const active = jenisFilter === opt.value;
@@ -771,7 +814,10 @@ export function NasabahPageContent() {
                     key={opt.label}
                     type="button"
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => setJenisFilter(opt.value)}
+                    onClick={() => {
+                      setJenisFilter(opt.value);
+                      if (opt.value !== "siswa") setKelasFilter("");
+                    }}
                     className="relative rounded-full px-3.5 py-1.5 text-xs font-semibold"
                   >
                     {active && (
@@ -859,55 +905,45 @@ export function NasabahPageContent() {
           </div>
         </div>
 
-        <div className="relative mt-4 flex items-center gap-3 rounded-2xl bg-background-hover/60 p-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Users size={14} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="mb-1.5 flex items-center justify-between gap-2 text-[11px] font-semibold text-text-secondary">
-              <span>Distribusi Status Nasabah</span>
-              <span className="flex items-center gap-2 text-text-muted">
-                <span className="flex items-center gap-1">
-                  <CheckCircle2 size={11} className="text-success" />
-                  {statusCounts.aktif} Aktif
-                </span>
-                <span className="flex items-center gap-1">
-                  <XCircle size={11} className="text-text-muted" />
-                  {statusCounts.nonaktif} Nonaktif
-                </span>
-              </span>
-            </div>
-            <div className="flex h-2 w-full overflow-hidden rounded-full bg-background-hover">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{
-                  width: `${
-                    statusCounts.aktif + statusCounts.nonaktif > 0
-                      ? (statusCounts.aktif / (statusCounts.aktif + statusCounts.nonaktif)) * 100
-                      : 0
-                  }%`,
-                }}
-                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                className="h-full bg-success"
-              />
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{
-                  width: `${
-                    statusCounts.aktif + statusCounts.nonaktif > 0
-                      ? (statusCounts.nonaktif / (statusCounts.aktif + statusCounts.nonaktif)) * 100
-                      : 0
-                  }%`,
-                }}
-                transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-                className="h-full bg-border"
-              />
-            </div>
-          </div>
-        </div>
-
-        {(jenisFilter || statusFilter) && (
+        {(jenisFilter || statusFilter || kelasFilter) && (
           <div className="relative mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+            {jenisFilter === "siswa" && kelasOptions.length > 0 && (
+              <>
+                <span className="flex items-center gap-1 text-[11px] font-semibold text-text-muted">
+                  <School size={11} />
+                  Kelas:
+                </span>
+                <div className="relative">
+                  <School
+                    size={13}
+                    className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-text-muted"
+                  />
+                  <select
+                    value={kelasFilter}
+                    onChange={(e) => setKelasFilter(e.target.value)}
+                    className="appearance-none rounded-xl border border-transparent bg-background-hover py-2 pr-8 pl-8 text-xs font-semibold text-text-secondary transition-shadow focus:border-primary focus:bg-background-card focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  >
+                    <option value="">Semua Kelas ({kelasOptions.length})</option>
+                    {kelasOptions.map((k) => (
+                      <option key={k} value={k}>
+                        {k}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {kelasFilter && (
+                  <span className="text-[11px] font-medium text-text-muted">
+                    {
+                      nasabahList.filter(
+                        (n) => n.jenisNasabah === "siswa" && n.kelas === kelasFilter,
+                      ).length
+                    }{" "}
+                    siswa di kelas ini
+                  </span>
+                )}
+                <span className="h-4 w-px shrink-0 bg-border" />
+              </>
+            )}
             <span className="flex items-center gap-1 text-[11px] font-semibold text-text-muted">
               <Sparkles size={11} />
               Filter aktif:
@@ -916,7 +952,22 @@ export function NasabahPageContent() {
               <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                 {JenisFilterIcon && <JenisFilterIcon size={12} />}
                 {jenisLabel[jenisFilter]}
-                <button type="button" onClick={() => setJenisFilter("")}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setJenisFilter("");
+                    setKelasFilter("");
+                  }}
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+            {kelasFilter && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                <School size={12} />
+                {kelasFilter}
+                <button type="button" onClick={() => setKelasFilter("")}>
                   <X size={12} />
                 </button>
               </span>
@@ -1186,7 +1237,7 @@ export function NasabahPageContent() {
                     </div>
                   </td>
                 </tr>
-              ) : displayList.length === 0 ? (
+              ) : pagedList.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center gap-2 text-text-secondary">
@@ -1196,16 +1247,29 @@ export function NasabahPageContent() {
                   </td>
                 </tr>
               ) : (
-                displayList.map((nasabah) => {
+                pagedList.map((nasabah, idx) => {
                   const Icon = JENIS_ICON[nasabah.jenisNasabah];
                   const saldoPositive = Number(nasabah.saldo) > 0;
                   const pct = completeness(nasabah);
+                  const showKelasHeader =
+                    jenisFilter === "siswa" &&
+                    (idx === 0 || pagedList[idx - 1].kelas !== nasabah.kelas);
                   return (
-                    <motion.tr
-                      key={nasabah.id}
-                      variants={rowVariants}
-                      className="border-b border-border transition-colors last:border-0 hover:bg-background-hover"
-                    >
+                    <Fragment key={nasabah.id}>
+                      {showKelasHeader && (
+                        <tr className="bg-primary/5">
+                          <td colSpan={7} className="px-4 py-2">
+                            <span className="flex items-center gap-1.5 text-xs font-bold text-primary">
+                              <School size={13} />
+                              {nasabah.kelas || "Kelas Belum Diatur"}
+                            </span>
+                          </td>
+                        </tr>
+                      )}
+                      <motion.tr
+                        variants={rowVariants}
+                        className="border-b border-border transition-colors last:border-0 hover:bg-background-hover"
+                      >
                       <td className="px-4 py-3">
                         <input
                           type="checkbox"
@@ -1307,13 +1371,44 @@ export function NasabahPageContent() {
                           </motion.button>
                         </div>
                       </td>
-                    </motion.tr>
+                      </motion.tr>
+                    </Fragment>
                   );
                 })
               )}
             </motion.tbody>
           </table>
         </div>
+
+        {displayList.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3">
+            <span className="text-xs font-semibold text-text-muted">
+              Menampilkan {(page - 1) * PAGE_SIZE + 1}-
+              {Math.min(page * PAGE_SIZE, displayList.length)} dari {displayList.length} nasabah
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-text-muted">
+                Halaman {page} dari {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-background-hover text-text-secondary transition-colors hover:bg-border disabled:opacity-40"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-background-hover text-text-secondary transition-colors hover:bg-border disabled:opacity-40"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
       </motion.div>
 
       <AnimatePresence>
@@ -1430,6 +1525,7 @@ export function NasabahPageContent() {
                       <option value="guru">Guru</option>
                       <option value="kelas">Kelas</option>
                       <option value="umum">Umum</option>
+                      <option value="wali_kelas">Wali Kelas</option>
                     </select>
                   </div>
                 </div>
@@ -2099,7 +2195,7 @@ export function NasabahPageContent() {
                       <option value="P">Perempuan</option>
                     </select>
                   </div>
-                  <div>
+                  <div className="relative">
                     <FieldLabel icon={Cake}>Tanggal Lahir</FieldLabel>
                     <input
                       type="date"
@@ -2107,8 +2203,18 @@ export function NasabahPageContent() {
                       onChange={(e) =>
                         setAddForm({ ...addForm, tanggalLahir: e.target.value })
                       }
-                      className={inputClass}
+                      className="peer absolute inset-x-0 bottom-0 top-6 z-10 h-[calc(100%-1.5rem)] w-full cursor-pointer opacity-0"
                     />
+                    <div
+                      className={`${inputClass} pointer-events-none flex items-center justify-between`}
+                    >
+                      <span className={addForm.tanggalLahir ? "" : "text-text-muted"}>
+                        {addForm.tanggalLahir
+                          ? formatDateOnlyID(addForm.tanggalLahir)
+                          : "Pilih tanggal"}
+                      </span>
+                      <Cake size={13} className="shrink-0 text-text-muted" />
+                    </div>
                   </div>
                   <div>
                     {addForm.jenisNasabah === "kelas" ? (

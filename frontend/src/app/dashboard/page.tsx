@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import toast from "react-hot-toast";
+import { notify } from "@/store/notifyStore";
 import {
   AlertCircle,
   ArrowDownToLine,
@@ -26,7 +26,7 @@ import { QuickActionsCard } from "@/components/dashboard/QuickActionsCard";
 import { useLiveClock } from "@/hooks/useLiveClock";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
-import { formatCurrency } from "@/lib/format";
+import { formatFullDateID, formatTimeShort, getWibHour } from "@/lib/format";
 import { useAuthStore } from "@/store/authStore";
 import type { NasabahStats, Transaksi, TransaksiStats } from "@/lib/types";
 
@@ -64,7 +64,7 @@ export default function DashboardPage() {
       setRecent(recentRes.data);
       setLastUpdated(new Date());
     } catch (error) {
-      toast.error(getErrorMessage(error, "Gagal memuat statistik dashboard"));
+      notify.error(getErrorMessage(error, "Gagal memuat statistik dashboard"));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -75,25 +75,16 @@ export default function DashboardPage() {
     loadStats();
   }, [loadStats]);
 
-  const fullDate = now
-    ? now.toLocaleDateString("id-ID", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      })
-    : "—";
+  const fullDate = now ? formatFullDateID(now) : "—";
   const greeting = (() => {
-    const hour = now?.getHours() ?? 12;
+    const hour = now ? getWibHour(now) : 12;
     if (hour < 10) return "Selamat pagi";
     if (hour < 15) return "Selamat siang";
     if (hour < 18) return "Selamat sore";
     return "Selamat malam";
   })();
   const initials = (user?.nama ?? "?").slice(0, 2).toUpperCase();
-  const lastUpdatedLabel = lastUpdated
-    ? lastUpdated.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
-    : "—";
+  const lastUpdatedLabel = lastUpdated ? formatTimeShort(lastUpdated) : "—";
 
   const totalSetoranHariIni = Number(transaksiStats?.setor.totalNominal ?? 0);
   const totalPenarikanHariIni = Number(transaksiStats?.tarik.totalNominal ?? 0);
@@ -111,8 +102,6 @@ export default function DashboardPage() {
       : 0;
   const totalSaldoNasabahAktif = Number(nasabahStats?.totalSaldo ?? 0);
   const totalNasabahAktif = nasabahStats?.totalNasabah ?? 0;
-  const rataSaldoPerNasabah =
-    totalNasabahAktif > 0 ? totalSaldoNasabahAktif / totalNasabahAktif : 0;
 
   const totalArusKas = totalSetoranHariIni + totalPenarikanHariIni;
   const setorProporsiNominal =
@@ -201,7 +190,7 @@ export default function DashboardPage() {
       ) : (
         <div className="space-y-4 md:space-y-6 2xl:space-y-7.5">
           <BalanceCard
-            kasSaatIni={kasSaatIni}
+            totalSaldo={totalSaldoNasabahAktif}
             totalTransaksiHariIni={totalTransaksiHariIni}
             totalSetoranHariIni={totalSetoranHariIni}
             totalPenarikanHariIni={totalPenarikanHariIni}
@@ -252,11 +241,11 @@ export default function DashboardPage() {
             />
             <GradientStatCard
               tone="green"
-              label="Saldo Nasabah Aktif"
-              value={totalSaldoNasabahAktif}
-              caption={`${totalNasabahAktif} nasabah terdaftar`}
-              icon={Wallet}
-              secondaryLabel={`Rata-rata ${formatCurrency(rataSaldoPerNasabah)}/nasabah`}
+              label="Arus Kas Hari Ini"
+              value={kasSaatIni}
+              caption={`${totalTransaksiHariIni} transaksi hari ini`}
+              icon={kasSaatIni >= 0 ? TrendingUp : TrendingDown}
+              secondaryLabel={`${totalNasabahAktif} nasabah terdaftar`}
               secondaryIcon={Users}
             />
           </motion.div>

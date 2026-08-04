@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -11,10 +12,12 @@ import {
 import { JenisTransaksi, Role } from '../generated/prisma/client';
 import { TransaksiService } from './transaksi.service';
 import { SetorTarikDto } from './dto/setor-tarik.dto';
+import { UpdateTransaksiDto } from './dto/update-transaksi.dto';
 import { StaffOnlyGuard } from '../auth/staff-only.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { resolveStaffId } from '../auth/resolve-staff-id';
 import type { JwtPayload } from '../auth/jwt.strategy';
 
 @Controller('transaksi')
@@ -23,25 +26,25 @@ export class TransaksiController {
 
   @Post('setor')
   @UseGuards(StaffOnlyGuard, RolesGuard)
-  @Roles(Role.teller)
+  @Roles(Role.teller, Role.co_teller)
   setor(@Body() dto: SetorTarikDto, @CurrentUser() user: JwtPayload) {
     return this.transaksiService.setor({
       nasabahId: dto.nasabahId,
       jumlah: dto.jumlah,
       keterangan: dto.keterangan,
-      processedById: user.id,
+      processedById: resolveStaffId(user),
     });
   }
 
   @Post('tarik')
   @UseGuards(StaffOnlyGuard, RolesGuard)
-  @Roles(Role.teller)
+  @Roles(Role.teller, Role.co_teller)
   tarik(@Body() dto: SetorTarikDto, @CurrentUser() user: JwtPayload) {
     return this.transaksiService.tarik({
       nasabahId: dto.nasabahId,
       jumlah: dto.jumlah,
       keterangan: dto.keterangan,
-      processedById: user.id,
+      processedById: resolveStaffId(user),
     });
   }
 
@@ -51,6 +54,22 @@ export class TransaksiController {
     return this.transaksiService.getTransaksiStats();
   }
 
+  @Patch(':id')
+  @UseGuards(StaffOnlyGuard, RolesGuard)
+  @Roles(Role.admin, Role.superadmin)
+  updateTransaksi(
+    @Param('id') id: string,
+    @Body() dto: UpdateTransaksiDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.transaksiService.updateTransaksi(
+      id,
+      dto.jumlah,
+      dto.keterangan,
+      resolveStaffId(user),
+    );
+  }
+
   @Get('mutasi/:nasabahId')
   getMutasi(
     @Param('nasabahId') nasabahId: string,
@@ -58,7 +77,13 @@ export class TransaksiController {
     @Query('from') from?: string,
     @Query('to') to?: string,
   ) {
-    if (user.accountType === 'nasabah' && user.id !== nasabahId) {
+    // Only block a *pure* nasabah (no linked staff role) from viewing
+    // someone else's mutasi - a dual-role login (e.g. teller/admin logging
+    // in with their NPY) still has accountType 'nasabah' as its primary
+    // identity, but must be able to look up any nasabah's mutasi like any
+    // other staff member.
+    const isPureNasabah = user.accountType === 'nasabah' && !user.linkedStaff;
+    if (isPureNasabah && user.id !== nasabahId) {
       throw new ForbiddenException('Tidak dapat mengakses mutasi nasabah lain');
     }
     return this.transaksiService.getMutasi(nasabahId, {

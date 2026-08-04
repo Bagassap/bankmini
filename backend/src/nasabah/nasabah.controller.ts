@@ -45,6 +45,12 @@ export class NasabahController {
     return this.nasabahService.update(user.id, dto);
   }
 
+  @Get('me/kelas-summary')
+  @UseGuards(NasabahOnlyGuard)
+  getKelasSummary(@CurrentUser() user: JwtPayload) {
+    return this.nasabahService.getKelasSummary(user.id);
+  }
+
   @Patch('me/password')
   @UseGuards(NasabahOnlyGuard)
   async changePassword(
