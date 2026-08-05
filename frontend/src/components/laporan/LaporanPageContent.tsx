@@ -17,6 +17,7 @@ import {
   Landmark,
   Loader2,
   PieChart as PieChartIcon,
+  Receipt,
   TrendingDown,
   TrendingUp,
   Users,
@@ -47,7 +48,12 @@ import {
   startOfWibWeek,
 } from "@/lib/format";
 import { JENIS_ICON, jenisLabel } from "@/lib/transaksiMeta";
-import type { JenisNasabah, Nasabah, Transaksi } from "@/lib/types";
+import {
+  KATEGORI_PENGELUARAN_COLOR,
+  KATEGORI_PENGELUARAN_ICON,
+  kategoriPengeluaranLabel,
+} from "@/lib/pengeluaranMeta";
+import type { JenisNasabah, KategoriPengeluaran, Nasabah, Pengeluaran, Transaksi } from "@/lib/types";
 
 interface Stat {
   label: string;
@@ -269,6 +275,7 @@ export function LaporanPageContent() {
   >(null);
   const [nasabahList, setNasabahList] = useState<Nasabah[]>([]);
   const [transaksiList, setTransaksiList] = useState<Transaksi[]>([]);
+  const [pengeluaranList, setPengeluaranList] = useState<Pengeluaran[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -277,9 +284,16 @@ export function LaporanPageContent() {
       try {
         const now = new Date();
         const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-        const [nasabahRes, transaksiRes] = await Promise.all([
+        const [nasabahRes, transaksiRes, pengeluaranRes] = await Promise.all([
           api.get<Nasabah[]>("/nasabah"),
           api.get<Transaksi[]>("/transaksi", {
+            params: {
+              from: toIsoDate(twelveMonthsAgo),
+              to: toIsoDate(now),
+              limit: 5000,
+            },
+          }),
+          api.get<Pengeluaran[]>("/pengeluaran", {
             params: {
               from: toIsoDate(twelveMonthsAgo),
               to: toIsoDate(now),
@@ -289,6 +303,7 @@ export function LaporanPageContent() {
         ]);
         setNasabahList(nasabahRes.data);
         setTransaksiList(transaksiRes.data);
+        setPengeluaranList(pengeluaranRes.data);
       } catch (error) {
         notify.error(getErrorMessage(error, "Gagal memuat data laporan"));
       } finally {
@@ -331,6 +346,35 @@ export function LaporanPageContent() {
         share: totalNasabahCount > 0 ? Math.round((count / totalNasabahCount) * 100) : 0,
       }));
 
+    const pengeluaranThisMonth = pengeluaranList
+      .filter((p) => monthKey(new Date(p.createdAt)) === thisMonth.key)
+      .reduce((sum, p) => sum + Number(p.jumlah), 0);
+    const pengeluaranLastMonth = pengeluaranList
+      .filter((p) => monthKey(new Date(p.createdAt)) === lastMonth.key)
+      .reduce((sum, p) => sum + Number(p.jumlah), 0);
+
+    const kategoriPengeluaranMap = new Map<KategoriPengeluaran, number>();
+    for (const p of pengeluaranList) {
+      kategoriPengeluaranMap.set(
+        p.kategori,
+        (kategoriPengeluaranMap.get(p.kategori) ?? 0) + Number(p.jumlah),
+      );
+    }
+    const totalPengeluaran12Bulan = pengeluaranList.reduce(
+      (sum, p) => sum + Number(p.jumlah),
+      0,
+    );
+    const kategoriPengeluaran = Array.from(kategoriPengeluaranMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([kategori, total]) => ({
+        kategori,
+        total,
+        share:
+          totalPengeluaran12Bulan > 0
+            ? Math.round((total / totalPengeluaran12Bulan) * 100)
+            : 0,
+      }));
+
     return {
       buckets,
       thisMonth,
@@ -341,8 +385,11 @@ export function LaporanPageContent() {
       aktifCount,
       totalNasabahCount,
       kategoriNasabah,
+      pengeluaranThisMonth,
+      pengeluaranLastMonth,
+      kategoriPengeluaran,
     };
-  }, [transaksiList, nasabahList]);
+  }, [transaksiList, nasabahList, pengeluaranList]);
 
   const barData12 = useMemo(
     () =>
@@ -397,6 +444,15 @@ export function LaporanPageContent() {
         icon: ArrowUpFromLine,
         caption: "Penarikan tunai keluar",
         gradient: "from-gradient-orange-from to-gradient-orange-to",
+      },
+      {
+        label: "Pengeluaran Operasional",
+        value: formatCurrency(report.pengeluaranThisMonth),
+        change: formatPctChange(report.pengeluaranThisMonth, report.pengeluaranLastMonth),
+        trend: report.pengeluaranThisMonth >= report.pengeluaranLastMonth ? "up" : "down",
+        icon: TrendingDown,
+        caption: "Kas keluar operasional",
+        gradient: "from-gradient-purple-from to-gradient-purple-to",
       },
       {
         label: "Nasabah Aktif",
@@ -847,6 +903,61 @@ export function LaporanPageContent() {
           </ChartCard>
         </div>
 
+      </motion.div>
+
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={{ hidden: {}, visible: { transition: { delayChildren: 0.15 } } }}
+        className="mt-4 md:mt-6 2xl:mt-7.5"
+      >
+        <ChartCard
+          title="Pengeluaran Operasional per Kategori"
+          subtitle="Akumulasi 12 bulan terakhir, di luar transaksi setor/tarik nasabah"
+          icon={Receipt}
+        >
+          {report.kategoriPengeluaran.length === 0 ? (
+            <p className="py-6 text-center text-xs text-text-muted">
+              Belum ada pengeluaran operasional tercatat
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {report.kategoriPengeluaran.map((cat) => {
+                const Icon = KATEGORI_PENGELUARAN_ICON[cat.kategori];
+                const color = KATEGORI_PENGELUARAN_COLOR[cat.kategori];
+                return (
+                  <div
+                    key={cat.kategori}
+                    className="rounded-2xl p-3.5"
+                    style={{ backgroundColor: `${color}0d` }}
+                  >
+                    <span
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                      style={{ backgroundColor: `${color}1a`, color }}
+                    >
+                      <Icon size={15} />
+                    </span>
+                    <p className="mt-2 truncate text-xs font-semibold text-text-secondary">
+                      {kategoriPengeluaranLabel[cat.kategori]}
+                    </p>
+                    <p className="text-sm font-bold text-text-primary">
+                      {formatCurrency(cat.total)}
+                    </p>
+                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-background-hover">
+                      <div
+                        className="h-full rounded-full transition-[width] duration-700"
+                        style={{ width: `${Math.min(100, cat.share)}%`, backgroundColor: color }}
+                      />
+                    </div>
+                    <p className="mt-1 text-[10px] font-medium text-text-muted">
+                      {cat.share}% dari total pengeluaran
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </ChartCard>
       </motion.div>
     </Layout>
   );

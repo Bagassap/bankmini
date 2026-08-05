@@ -44,6 +44,14 @@ enum AccountType {
   nasabah
 }
 
+enum KategoriPengeluaran {
+  cetak_buku_tabungan
+  atk
+  konsumsi
+  perawatan
+  lainnya
+}
+
 model User {
   id        String    @id @default(uuid())
   username  String    @unique
@@ -64,6 +72,8 @@ model User {
   simpananHariRayaAnggotaProcessed   SimpananHariRayaAnggota[]   @relation("SimpananHariRayaAnggotaProcessedBy")
   piutangProcessed                   Piutang[]                   @relation("PiutangProcessedBy")
   piutangAngsuranProcessed           PiutangAngsuran[]           @relation("PiutangAngsuranProcessedBy")
+  pengeluaranProcessed               Pengeluaran[]               @relation("PengeluaranProcessedBy")
+  pengeluaranEdited                  Pengeluaran[]               @relation("PengeluaranEditedBy")
 
   @@map("users")
 }
@@ -121,6 +131,21 @@ model Transaksi {
   editedBy       User?          @relation("EditedBy", fields: [editedById], references: [id])
 
   @@map("transaksi")
+}
+
+model Pengeluaran {
+  id            String              @id @default(uuid())
+  kategori      KategoriPengeluaran
+  keterangan    String
+  jumlah        Decimal             @db.Decimal(15, 2)
+  processedById String
+  processedBy   User                @relation("PengeluaranProcessedBy", fields: [processedById], references: [id])
+  editedById    String?
+  editedBy      User?               @relation("PengeluaranEditedBy", fields: [editedById], references: [id])
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@map("pengeluaran")
 }
 
 model Session {

@@ -11,6 +11,7 @@ import { NasabahModule } from './nasabah/nasabah.module';
 import { TransaksiModule } from './transaksi/transaksi.module';
 import { SimpananModule } from './simpanan/simpanan.module';
 import { PiutangModule } from './piutang/piutang.module';
+import { PengeluaranModule } from './pengeluaran/pengeluaran.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { PiutangModule } from './piutang/piutang.module';
     TransaksiModule,
     SimpananModule,
     PiutangModule,
+    PengeluaranModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: JwtAuthGuard }],
