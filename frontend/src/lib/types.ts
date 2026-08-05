@@ -82,6 +82,26 @@ export interface Transaksi {
   editedBy?: { nama: string } | null;
 }
 
+export type KategoriPengeluaran =
+  | "cetak_buku_tabungan"
+  | "atk"
+  | "konsumsi"
+  | "perawatan"
+  | "lainnya";
+
+export interface Pengeluaran {
+  id: string;
+  kategori: KategoriPengeluaran;
+  keterangan: string;
+  jumlah: string | number;
+  processedById: string;
+  processedBy?: { nama: string } | null;
+  editedById?: string | null;
+  editedBy?: { nama: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface NasabahStats {
   totalNasabah: number;
   totalSaldo: string | number;

@@ -18,6 +18,7 @@ import {
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
+  Receipt,
   Search,
   ShieldCheck,
   User,
@@ -68,6 +69,10 @@ const TELLER_MENU_GROUPS: MenuGroup[] = [
     ],
   },
   {
+    label: "Pengeluaran",
+    items: [{ label: "Pengeluaran", href: "/pengeluaran", icon: Receipt }],
+  },
+  {
     label: "Laporan",
     items: [{ label: "Laporan", href: "/laporan", icon: FileBarChart2 }],
   },
@@ -104,6 +109,10 @@ const ADMIN_MENU_GROUPS: MenuGroup[] = [
       { label: "Transaksi", href: "/admin/transaksi", icon: Eye },
       { label: "Mutasi", href: "/admin/mutasi", icon: History },
     ],
+  },
+  {
+    label: "Pengeluaran",
+    items: [{ label: "Pengeluaran", href: "/admin/pengeluaran", icon: Receipt }],
   },
   {
     label: "Laporan",
