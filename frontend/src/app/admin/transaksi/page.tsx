@@ -14,12 +14,14 @@ import {
   ClipboardList,
   Eye,
   Hash,
+  History,
   ListFilter,
   Loader2,
   Pencil,
   Receipt,
   RefreshCw,
   ShieldCheck,
+  TrendingUp,
   Users,
   Wallet,
   X,
@@ -27,6 +29,7 @@ import {
 } from "lucide-react";
 import Layout from "@/components/Layout";
 import { DateRangePicker } from "@/components/DateRangePicker";
+import { RatioRing } from "@/components/RatioRing";
 import { KuitansiModal } from "@/components/transaksi/KuitansiModal";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
@@ -113,6 +116,10 @@ export default function AdminTransaksiPage() {
     const totalSetor = setorList.reduce((sum, t) => sum + Number(t.jumlah), 0);
     const totalTarik = tarikList.reduce((sum, t) => sum + Number(t.jumlah), 0);
     const totalVolume = totalSetor + totalTarik;
+    const sorted = [...data].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+    const uniqueNasabah = new Set(data.map((t) => t.nasabah?.id).filter(Boolean));
     return {
       totalCount: data.length,
       setorCount: setorList.length,
@@ -120,6 +127,10 @@ export default function AdminTransaksiPage() {
       totalSetor,
       totalTarik,
       setorShare: totalVolume > 0 ? Math.round((totalSetor / totalVolume) * 100) : 0,
+      rataRata: data.length > 0 ? totalVolume / data.length : 0,
+      earliest: sorted[0]?.createdAt,
+      latest: sorted[sorted.length - 1]?.createdAt,
+      nasabahCount: uniqueNasabah.size,
     };
   }, [data]);
 
@@ -281,79 +292,127 @@ export default function AdminTransaksiPage() {
             </div>
           </div>
 
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.08 } } }}
-            className="relative grid grid-cols-3 gap-3"
-          >
-            {[
-              {
-                label: "Total Transaksi",
-                caption: `${stats.totalCount} transaksi tercatat`,
-                value: stats.totalCount,
-                icon: ClipboardList,
-                gradient: "from-primary to-primary-dark",
-              },
-              {
-                label: "Setor",
-                caption: formatCurrency(stats.totalSetor),
-                value: stats.setorCount,
-                icon: ArrowDownToLine,
-                gradient: "from-gradient-green-from to-gradient-green-to",
-              },
-              {
-                label: "Tarik",
-                caption: formatCurrency(stats.totalTarik),
-                value: stats.tarikCount,
-                icon: ArrowUpFromLine,
-                gradient: "from-gradient-orange-from to-gradient-orange-to",
-              },
-            ].map((tile) => (
-              <motion.div
-                key={tile.label}
-                variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
-                whileHover={{ y: -3 }}
-                className={`relative overflow-hidden rounded-2xl bg-linear-to-br p-4 text-white shadow-sm transition-shadow hover:shadow-md ${tile.gradient}`}
-              >
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 opacity-20 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_1px,transparent_1px)] bg-size-[12px_12px]"
-                />
-                <div className="relative flex items-center gap-3">
-                  <motion.span
-                    initial={{ scale: 0.6, opacity: 0, rotate: -15 }}
-                    animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm"
-                  >
-                    <tile.icon size={15} />
-                  </motion.span>
-                  <div className="flex min-w-0 items-center gap-2">
-                    <p className="text-2xl font-bold">{tile.value}</p>
-                    <div className="min-w-0 leading-tight">
-                      <p className="truncate text-[11px] font-semibold text-white/85">{tile.label}</p>
-                      <p className="truncate text-[10px] text-white/60">{tile.caption}</p>
+          <div className="relative flex flex-col items-center gap-6 md:flex-row">
+            <RatioRing percent={stats.setorShare} color="#1120f0" />
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.08 } } }}
+              className="grid w-full flex-1 grid-cols-3 gap-3"
+            >
+              {[
+                {
+                  label: "Total Transaksi",
+                  caption: `${stats.nasabahCount} nasabah terlibat`,
+                  value: stats.totalCount,
+                  icon: ClipboardList,
+                  gradient: "from-primary to-primary-dark",
+                  progressPct: 100,
+                  progressLabel: "Seluruh aktivitas",
+                },
+                {
+                  label: "Setor",
+                  caption: formatCurrency(stats.totalSetor),
+                  value: stats.setorCount,
+                  icon: ArrowDownToLine,
+                  gradient: "from-gradient-green-from to-gradient-green-to",
+                  progressPct: stats.setorShare,
+                  progressLabel: "Dari total nominal",
+                },
+                {
+                  label: "Tarik",
+                  caption: formatCurrency(stats.totalTarik),
+                  value: stats.tarikCount,
+                  icon: ArrowUpFromLine,
+                  gradient: "from-gradient-orange-from to-gradient-orange-to",
+                  progressPct: 100 - stats.setorShare,
+                  progressLabel: "Dari total nominal",
+                },
+              ].map((tile) => (
+                <motion.div
+                  key={tile.label}
+                  variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
+                  whileHover={{ y: -3 }}
+                  className={`relative flex h-full flex-col justify-center overflow-hidden rounded-2xl bg-linear-to-br p-4 text-white shadow-sm transition-shadow hover:shadow-md ${tile.gradient}`}
+                >
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 opacity-20 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_1px,transparent_1px)] bg-size-[12px_12px]"
+                  />
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute -top-6 -right-6 h-16 w-16 rounded-full bg-white/10 blur-xl"
+                  />
+                  <div className="relative flex items-center gap-2.5">
+                    <motion.span
+                      initial={{ scale: 0.6, opacity: 0, rotate: -15 }}
+                      animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm"
+                    >
+                      <tile.icon size={15} />
+                    </motion.span>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <p className="text-2xl font-bold">{tile.value}</p>
+                      <div className="min-w-0 leading-tight">
+                        <p className="truncate text-[11px] font-semibold text-white/85">
+                          {tile.label}
+                        </p>
+                        <p className="truncate text-[10px] text-white/60">{tile.caption}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
+                  <div className="relative mt-3">
+                    <div className="mb-1 flex items-center justify-between text-[10px] text-white/75">
+                      <span className="truncate">{tile.progressLabel}</span>
+                      <span className="shrink-0 font-bold text-white">{tile.progressPct}%</span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/20">
+                      <div
+                        className="h-full rounded-full bg-white transition-[width] duration-700"
+                        style={{ width: `${Math.min(100, Math.max(0, tile.progressPct))}%` }}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
 
-          <div className="relative mt-5 flex items-center gap-2 border-t border-border pt-4 text-xs">
-            <span className="font-semibold text-text-secondary">Proporsi Setor vs Tarik</span>
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-background-hover">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${stats.setorShare}%` }}
-                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                className="h-full rounded-full bg-success"
-              />
+          <div className="relative mt-5">
+            <div className="flex items-center gap-2 border-t border-border pt-4 text-xs">
+              <span className="font-semibold text-text-secondary">Proporsi Setor vs Tarik</span>
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-background-hover">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${stats.setorShare}%` }}
+                  transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                  className="h-full rounded-full bg-success"
+                />
+              </div>
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 font-bold text-primary">
+                {stats.setorShare}% : {100 - stats.setorShare}%
+              </span>
             </div>
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 font-bold text-primary">
-              {stats.setorShare}% : {100 - stats.setorShare}%
-            </span>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
+              <span className="flex items-center gap-1.5 rounded-full bg-background-hover px-2.5 py-1 font-semibold text-text-secondary">
+                <TrendingUp size={12} className="text-primary" />
+                Rata-rata {formatCurrency(stats.rataRata)}/transaksi
+              </span>
+              <span className="flex items-center gap-1.5 rounded-full bg-background-hover px-2.5 py-1 font-semibold text-text-secondary">
+                <Users size={12} className="text-primary" />
+                {stats.nasabahCount > 0
+                  ? `${stats.nasabahCount} nasabah bertransaksi`
+                  : "Belum ada nasabah bertransaksi"}
+              </span>
+              <span className="flex items-center gap-1.5 rounded-full bg-background-hover px-2.5 py-1 font-semibold text-text-secondary">
+                <History size={12} className="text-primary" />
+                {stats.earliest
+                  ? `${formatDate(stats.earliest)} — ${formatDate(stats.latest ?? stats.earliest)}`
+                  : "Belum ada transaksi pada periode ini"}
+              </span>
+            </div>
           </div>
         </motion.div>
       </motion.div>
