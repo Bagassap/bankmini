@@ -818,13 +818,13 @@ export function NasabahPageContent() {
                       setJenisFilter(opt.value);
                       if (opt.value !== "siswa") setKelasFilter("");
                     }}
-                    className="relative rounded-full px-3.5 py-1.5 text-xs font-semibold"
+                    className="relative rounded-xl px-3.5 py-1.5 text-xs font-semibold"
                   >
                     {active && (
                       <motion.span
                         layoutId="jenis-pill-active"
                         transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                        className="absolute inset-0 rounded-full shadow-sm"
+                        className="absolute inset-0 rounded-xl shadow-sm"
                         style={{ backgroundColor: color }}
                       />
                     )}

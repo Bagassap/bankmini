@@ -118,13 +118,19 @@ export default function RiwayatPage() {
     const sorted = [...filtered].sort(
       (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     );
+    const largest = filtered.reduce(
+      (max, t) => (Number(t.jumlah) > max ? Number(t.jumlah) : max),
+      0,
+    );
     return {
       setorCount: setorList.length,
       tarikCount: tarikList.length,
       totalSetor,
       totalTarik,
+      totalVolume,
       setorShare: totalVolume > 0 ? Math.round((totalSetor / totalVolume) * 100) : 0,
       rataRata: filtered.length > 0 ? totalVolume / filtered.length : 0,
+      largest,
       earliest: sorted[0]?.createdAt,
       latest: sorted[sorted.length - 1]?.createdAt,
     };
@@ -318,20 +324,22 @@ export default function RiwayatPage() {
               </span>
             </div>
 
-            {filtered.length > 0 && (
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
-                <span className="flex items-center gap-1.5 rounded-full bg-background-hover px-2.5 py-1 font-semibold text-text-secondary">
-                  <TrendingUp size={12} className="text-primary" />
-                  Rata-rata {formatCurrency(stats.rataRata)}/transaksi
-                </span>
-                {stats.earliest && (
-                  <span className="flex items-center gap-1.5 rounded-full bg-background-hover px-2.5 py-1 font-semibold text-text-secondary">
-                    <History size={12} className="text-primary" />
-                    Sejak {formatDate(stats.earliest)}
-                  </span>
-                )}
-              </div>
-            )}
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
+              <span className="flex items-center gap-1.5 rounded-full bg-background-hover px-2.5 py-1 font-semibold text-text-secondary">
+                <TrendingUp size={12} className="text-primary" />
+                Rata-rata {formatCurrency(stats.rataRata)}/transaksi
+              </span>
+              <span className="flex items-center gap-1.5 rounded-full bg-background-hover px-2.5 py-1 font-semibold text-text-secondary">
+                <Wallet size={12} className="text-primary" />
+                Transaksi terbesar {formatCurrency(stats.largest)}
+              </span>
+              <span className="flex items-center gap-1.5 rounded-full bg-background-hover px-2.5 py-1 font-semibold text-text-secondary">
+                <History size={12} className="text-primary" />
+                {stats.earliest
+                  ? `Sejak ${formatDate(stats.earliest)}`
+                  : "Belum ada transaksi pada periode ini"}
+              </span>
+            </div>
           </div>
         </motion.div>
       </motion.div>
