@@ -1,10 +1,6 @@
-import { IsEnum, IsNotEmpty, IsNumber, IsPositive, IsString } from 'class-validator';
-import { KategoriPengeluaran } from '../../generated/prisma/client';
+import { IsNotEmpty, IsNumber, IsPositive, IsString } from 'class-validator';
 
 export class CreatePengeluaranDto {
-  @IsEnum(KategoriPengeluaran)
-  kategori: KategoriPengeluaran;
-
   @IsString()
   @IsNotEmpty()
   keterangan: string;

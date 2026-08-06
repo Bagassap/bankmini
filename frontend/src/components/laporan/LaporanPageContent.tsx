@@ -17,7 +17,6 @@ import {
   Landmark,
   Loader2,
   PieChart as PieChartIcon,
-  Receipt,
   TrendingDown,
   TrendingUp,
   Users,
@@ -48,12 +47,7 @@ import {
   startOfWibWeek,
 } from "@/lib/format";
 import { JENIS_ICON, jenisLabel } from "@/lib/transaksiMeta";
-import {
-  KATEGORI_PENGELUARAN_COLOR,
-  KATEGORI_PENGELUARAN_ICON,
-  kategoriPengeluaranLabel,
-} from "@/lib/pengeluaranMeta";
-import type { JenisNasabah, KategoriPengeluaran, Nasabah, Pengeluaran, Transaksi } from "@/lib/types";
+import type { JenisNasabah, Nasabah, Pengeluaran, Transaksi } from "@/lib/types";
 
 interface Stat {
   label: string;
@@ -353,28 +347,6 @@ export function LaporanPageContent() {
       .filter((p) => monthKey(new Date(p.createdAt)) === lastMonth.key)
       .reduce((sum, p) => sum + Number(p.jumlah), 0);
 
-    const kategoriPengeluaranMap = new Map<KategoriPengeluaran, number>();
-    for (const p of pengeluaranList) {
-      kategoriPengeluaranMap.set(
-        p.kategori,
-        (kategoriPengeluaranMap.get(p.kategori) ?? 0) + Number(p.jumlah),
-      );
-    }
-    const totalPengeluaran12Bulan = pengeluaranList.reduce(
-      (sum, p) => sum + Number(p.jumlah),
-      0,
-    );
-    const kategoriPengeluaran = Array.from(kategoriPengeluaranMap.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(([kategori, total]) => ({
-        kategori,
-        total,
-        share:
-          totalPengeluaran12Bulan > 0
-            ? Math.round((total / totalPengeluaran12Bulan) * 100)
-            : 0,
-      }));
-
     return {
       buckets,
       thisMonth,
@@ -387,7 +359,6 @@ export function LaporanPageContent() {
       kategoriNasabah,
       pengeluaranThisMonth,
       pengeluaranLastMonth,
-      kategoriPengeluaran,
     };
   }, [transaksiList, nasabahList, pengeluaranList]);
 
@@ -903,61 +874,6 @@ export function LaporanPageContent() {
           </ChartCard>
         </div>
 
-      </motion.div>
-
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={{ hidden: {}, visible: { transition: { delayChildren: 0.15 } } }}
-        className="mt-4 md:mt-6 2xl:mt-7.5"
-      >
-        <ChartCard
-          title="Pengeluaran Operasional per Kategori"
-          subtitle="Akumulasi 12 bulan terakhir, di luar transaksi setor/tarik nasabah"
-          icon={Receipt}
-        >
-          {report.kategoriPengeluaran.length === 0 ? (
-            <p className="py-6 text-center text-xs text-text-muted">
-              Belum ada pengeluaran operasional tercatat
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              {report.kategoriPengeluaran.map((cat) => {
-                const Icon = KATEGORI_PENGELUARAN_ICON[cat.kategori];
-                const color = KATEGORI_PENGELUARAN_COLOR[cat.kategori];
-                return (
-                  <div
-                    key={cat.kategori}
-                    className="rounded-2xl p-3.5"
-                    style={{ backgroundColor: `${color}0d` }}
-                  >
-                    <span
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-                      style={{ backgroundColor: `${color}1a`, color }}
-                    >
-                      <Icon size={15} />
-                    </span>
-                    <p className="mt-2 truncate text-xs font-semibold text-text-secondary">
-                      {kategoriPengeluaranLabel[cat.kategori]}
-                    </p>
-                    <p className="text-sm font-bold text-text-primary">
-                      {formatCurrency(cat.total)}
-                    </p>
-                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-background-hover">
-                      <div
-                        className="h-full rounded-full transition-[width] duration-700"
-                        style={{ width: `${Math.min(100, cat.share)}%`, backgroundColor: color }}
-                      />
-                    </div>
-                    <p className="mt-1 text-[10px] font-medium text-text-muted">
-                      {cat.share}% dari total pengeluaran
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </ChartCard>
       </motion.div>
     </Layout>
   );
