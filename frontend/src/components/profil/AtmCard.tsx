@@ -8,21 +8,10 @@ import { JENIS_ICON, jenisLabel } from "@/lib/transaksiMeta";
 import logoMark from "@/assets/logo-mark.png";
 import type { Nasabah } from "@/lib/types";
 
-// Groups the "BM260801 0001"-style noRekening into 4-character blocks so it
-// reads like a real card number - it's whatever length noRekening happens
-// to be, not a fixed 16 digits, so this works off the actual string rather
-// than assuming a card-standard length.
 function groupNoRekening(noRekening: string): string[] {
   return noRekening.match(/.{1,4}/g) ?? [noRekening];
 }
 
-// Standalone virtual card, sized like a real debit card (ISO/IEC 7810 ID-1
-// ratio, 85.6mm x 54mm ~= 1.586:1) - kept as its own card element so it can
-// sit beside the Saldo Saat Ini card in the same row instead of being
-// nested inside it. Shared by every nasabah "role" (siswa/guru/umum/kelas/
-// wali_kelas) and dual-role staff since they all render the same portal
-// dashboard - styled deliberately busy/layered like a modern m-banking
-// card (rings, foil sweep, watermark, sparkles) rather than a flat rectangle.
 export function AtmCard({ nasabah }: { nasabah: Nasabah }) {
   const [revealed, setRevealed] = useState(false);
 
@@ -39,7 +28,6 @@ export function AtmCard({ nasabah }: { nasabah: Nasabah }) {
       transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
       className="relative flex aspect-[1.586/1] w-full flex-col justify-between overflow-hidden rounded-3xl bg-linear-to-br from-primary via-primary to-primary-dark p-5 text-white shadow-soft ring-1 ring-white/15"
     >
-      {/* Layered background texture */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-25 bg-[radial-gradient(circle,rgba(255,255,255,0.8)_1px,transparent_1px)] bg-size-[14px_14px]"
@@ -49,7 +37,6 @@ export function AtmCard({ nasabah }: { nasabah: Nasabah }) {
         className="pointer-events-none absolute inset-0 opacity-[0.07] bg-[radial-gradient(circle,rgba(255,255,255,0.9)_1.5px,transparent_1.5px)] bg-size-[42px_42px]"
       />
 
-      {/* Concentric sunburst rings, top-right */}
       <svg
         aria-hidden
         viewBox="0 0 200 200"
@@ -85,7 +72,6 @@ export function AtmCard({ nasabah }: { nasabah: Nasabah }) {
         className="pointer-events-none absolute bottom-1/4 left-1/3 h-16 w-16 rounded-full bg-gradient-green-from/20 blur-xl"
       />
 
-      {/* Holographic diagonal foil sweep */}
       <div
         aria-hidden
         className="pointer-events-none absolute -inset-y-8 -left-1/4 w-1/4 -rotate-12 bg-linear-to-r from-white/0 via-white/20 to-white/0"
@@ -95,7 +81,6 @@ export function AtmCard({ nasabah }: { nasabah: Nasabah }) {
         className="pointer-events-none absolute -inset-y-8 left-1/2 w-[10%] -rotate-12 bg-linear-to-r from-white/0 via-gradient-green-from/25 to-white/0"
       />
 
-      {/* Scattered sparkle accents */}
       <Sparkles
         aria-hidden
         size={12}
@@ -173,7 +158,6 @@ export function AtmCard({ nasabah }: { nasabah: Nasabah }) {
           </p>
         </div>
 
-        {/* Original abstract network mark - not a trademarked payment logo */}
         <div aria-hidden className="relative flex h-7 w-11 shrink-0 items-center">
           <span className="absolute right-4 h-6 w-6 rounded-full bg-white/45 mix-blend-screen" />
           <span className="absolute right-0 h-6 w-6 rounded-full bg-gradient-green-from/50 mix-blend-screen" />

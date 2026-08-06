@@ -21,8 +21,6 @@ type PiutangWithRelations = Prisma.PiutangGetPayload<{
   };
 }>;
 
-// Product-decision constants, snapshotted onto each Piutang at creation time
-// so a rate change later never retroactively affects an existing loan.
 const TENOR_MAX = 24;
 const PERSENTASE_JASA: Record<JenisPiutang, number> = {
   bulanan: 1,
@@ -127,9 +125,6 @@ export class PiutangService {
         }
       : null;
 
-    // Only one installment may be paid per calendar month (WIB) - so the
-    // most recent payment, if it falls in the current month, is what a
-    // teller should see as "already settled" rather than another due bill.
     const monthStart = startOfWibMonth();
     const monthEnd = endOfWibMonthExclusive();
     const sudahBayarBulanIni = lastAngsuranRow
@@ -178,10 +173,6 @@ export class PiutangService {
     };
   }
 
-  // Pure function deriving what the next installment must be, purely from
-  // the loan's locked-in terms and how many installments are already paid -
-  // this is the single source of truth used both for the ringkasan preview
-  // and for actually creating the angsuran record, so they can never drift.
   private computeAngsuran(
     piutang: {
       jenisPiutang: JenisPiutang;
@@ -321,10 +312,6 @@ export class PiutangService {
     }
   }
 
-  // Nominal and jenisPembayaran are never accepted from the client - they
-  // are entirely derived here from the loan's locked-in terms and how many
-  // installments are already recorded, so a teller can only ever confirm
-  // the next scheduled payment, never mis-key an amount.
   async createAngsuran(
     piutangId: string,
     processedById: string,

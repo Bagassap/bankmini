@@ -5,8 +5,6 @@ export class DaftarSimpananHariRayaDto {
   @IsNotEmpty()
   nasabahId: string;
 
-  // Free amount, decided once at registration and locked for every deposit
-  // in this cycle afterward.
   @IsNumber()
   @IsPositive()
   nominal: number;

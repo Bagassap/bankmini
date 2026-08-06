@@ -604,7 +604,6 @@ export function SimpananPageContent() {
         </div>
       </motion.div>
 
-      {/* Modal Tambah Simpanan Pokok */}
       <AnimatePresence>
         {pokokTarget && (
           <motion.div
@@ -723,7 +722,6 @@ export function SimpananPageContent() {
         )}
       </AnimatePresence>
 
-      {/* Modal Tambah Simpanan Wajib */}
       <AnimatePresence>
         {wajibTarget && (
           <motion.div
@@ -879,7 +877,6 @@ export function SimpananPageContent() {
         )}
       </AnimatePresence>
 
-      {/* Modal Riwayat Simpanan Wajib */}
       <AnimatePresence>
         {historyTarget && (
           <motion.div

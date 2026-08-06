@@ -41,9 +41,6 @@ export class TransaksiService {
   private async generateNoTransaksi(
     tx: Prisma.TransactionClient,
   ): Promise<string> {
-    // Must follow the WIB calendar day, not the server's own (UTC) system
-    // date - otherwise transactions made 00:00-07:00 WIB would be stamped
-    // with the previous day's prefix.
     const { year, month, day } = wibDateParts();
     const yy = String(year).slice(-2);
     const mm = String(month + 1).padStart(2, '0');
@@ -152,15 +149,6 @@ export class TransaksiService {
     }
   }
 
-  // Corrects a teller's mistyped transaction (wrong nominal/keterangan).
-  // Because every Transaksi row snapshots a running saldoSebelum/saldoSesudah
-  // rather than being computed on read, changing jumlah shifts the balance
-  // for this transaction AND every later transaction of the same nasabah by
-  // the same fixed delta - cascaded here in one atomic transaction, then the
-  // nasabah's current saldo (which mirrors the ledger's latest saldoSesudah)
-  // is shifted by that same delta. noTransaksi (not createdAt) orders the
-  // cascade since it's a guaranteed strictly-increasing sequence, immune to
-  // millisecond timestamp collisions.
   async updateTransaksi(
     id: string,
     jumlah: number,
@@ -303,9 +291,6 @@ export class TransaksiService {
 
   async getTransaksiStats() {
     try {
-      // "Today" must follow WIB (UTC+7), not the server's own system
-      // timezone - computed from a UTC instant so it's correct regardless
-      // of what timezone the host happens to run in.
       const startOfDay = startOfWibDay();
       const endOfDay = endOfWibDayExclusive();
 

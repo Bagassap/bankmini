@@ -55,7 +55,6 @@ const rowVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.25 } },
 };
 
-
 export function MutasiPageContent() {
   const noRekeningRef = useRef<HTMLInputElement>(null);
   const {
@@ -104,9 +103,6 @@ export function MutasiPageContent() {
     loadMutasi();
   }, [nasabah, from, to]);
 
-  // No nasabah selected yet - show real recent transactions across every
-  // nasabah instead, so kuitansi is reachable without picking a rekening
-  // first (superadmin/admin/teller all land here via the same component).
   useEffect(() => {
     if (nasabah) return;
     let cancelled = false;

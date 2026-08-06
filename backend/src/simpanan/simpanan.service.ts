@@ -8,16 +8,9 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
-// Fixed for every member, per product decision - the API is authoritative
-// here so a client can never override it, even if the request body carries
-// a different value.
 const SIMPANAN_POKOK_NOMINAL = 500_000;
 const SIMPANAN_WAJIB_NOMINAL = 10_000;
 
-// Target deposit count before a Simpanan Hari Raya cycle is "ready" to cash
-// out (e.g. Rp200rb x 10 bulan menjelang Idul Fitri). This is informational
-// only, per product decision - staff can still cash out earlier (a member
-// resigning mid-cycle, etc.), it is never enforced as a hard block.
 const HARI_RAYA_TARGET_SETORAN = 10;
 
 export interface SimpananRingkasanItem {
@@ -47,9 +40,6 @@ export interface SimpananHariRayaRingkasanItem {
   jumlahSetoran: number;
   target: number;
   progress: number;
-  // Set when the nasabah registers (SimpananHariRayaAnggota) for the
-  // current cycle, or derived from their first deposit as a fallback. Null
-  // means "not a member of this cycle yet" - Setor is blocked until then.
   nominalPerBulan: number | null;
   lastPencairan: { tanggal: Date; jumlah: number } | null;
 }
@@ -342,10 +332,6 @@ export class SimpananService {
     try {
       await this.assertGuruAnggota(nasabahId);
 
-      // Once a periode (bulan) is recorded for the current cycle it is
-      // final - there is deliberately no edit/delete endpoint for this
-      // model, and a second deposit for the same periode is rejected here
-      // rather than silently stacking, per product decision.
       const lastPencairan =
         await this.prisma.simpananHariRayaPencairan.findFirst({
           where: { nasabahId },
@@ -380,11 +366,6 @@ export class SimpananService {
         );
       }
 
-      // Nominal is decided when the nasabah is registered (see
-      // daftarAnggotaHariRaya) - Setor never accepts one from the client,
-      // it just uses whatever was locked in at registration. Falls back to
-      // the first deposit's nominal for robustness, though in normal use a
-      // deposit can't exist without a registration ahead of it.
       const nominalToUse =
         currentCycleRegistrations.length > 0
           ? Number(currentCycleRegistrations[0].nominal)

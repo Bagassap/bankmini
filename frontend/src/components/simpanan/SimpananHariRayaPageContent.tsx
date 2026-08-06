@@ -648,7 +648,6 @@ export function SimpananHariRayaPageContent() {
         </div>
       </motion.div>
 
-      {/* Modal Tambah Anggota */}
       <AnimatePresence>
         {daftarTarget && (
           <motion.div
@@ -793,7 +792,6 @@ export function SimpananHariRayaPageContent() {
         )}
       </AnimatePresence>
 
-      {/* Modal Setor */}
       <AnimatePresence>
         {setorTarget && (
           <motion.div
@@ -950,7 +948,6 @@ export function SimpananHariRayaPageContent() {
         )}
       </AnimatePresence>
 
-      {/* Modal Cairkan */}
       <AnimatePresence>
         {cairkanTarget && (
           <motion.div
@@ -1037,7 +1034,6 @@ export function SimpananHariRayaPageContent() {
         )}
       </AnimatePresence>
 
-      {/* Modal Riwayat */}
       <AnimatePresence>
         {historyTarget && (
           <motion.div
