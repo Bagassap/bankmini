@@ -5,14 +5,18 @@ import { AnimatePresence, motion } from "framer-motion";
 import { notify } from "@/store/notifyStore";
 import {
   AlertTriangle,
+  Calendar,
   ChevronLeft,
   ChevronRight,
+  Coins,
   ListFilter,
   Loader2,
   Pencil,
   Plus,
   Receipt,
   TrendingDown,
+  TrendingUp,
+  UserCircle2,
   Wallet,
   X,
 } from "lucide-react";
@@ -46,6 +50,8 @@ const cardVariants = {
     transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const },
   },
 };
+
+const STAFF_COLORS = ["#1120f0", "#22c55e", "#ea580c", "#a78bfa", "#0d9488", "#f59e0b"];
 
 export function PengeluaranPageContent() {
   const user = useAuthStore((state) => state.user);
@@ -98,7 +104,30 @@ export function PengeluaranPageContent() {
 
   const stats = useMemo(() => {
     const total = data.reduce((sum, p) => sum + Number(p.jumlah), 0);
-    return { total, count: data.length };
+    const count = data.length;
+    const rataRata = count > 0 ? total / count : 0;
+    const largest = data.reduce((max, p) => Math.max(max, Number(p.jumlah)), 0);
+    const latest = [...data].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )[0];
+
+    const perStaffMap = new Map<string, { nama: string; total: number; count: number }>();
+    for (const p of data) {
+      const nama = p.processedBy?.nama ?? "-";
+      const entry = perStaffMap.get(nama) ?? { nama, total: 0, count: 0 };
+      entry.total += Number(p.jumlah);
+      entry.count += 1;
+      perStaffMap.set(nama, entry);
+    }
+    const perStaff = Array.from(perStaffMap.values())
+      .sort((a, b) => b.total - a.total)
+      .map((entry, i) => ({
+        ...entry,
+        share: total > 0 ? Math.round((entry.total / total) * 100) : 0,
+        color: STAFF_COLORS[i % STAFF_COLORS.length],
+      }));
+
+    return { total, count, rataRata, largest, latest, perStaff };
   }, [data]);
 
   const totalPages = Math.max(1, Math.ceil(data.length / PAGE_SIZE));
@@ -243,6 +272,79 @@ export function PengeluaranPageContent() {
               </div>
             </div>
           </div>
+
+          <div className="relative mt-4 grid grid-cols-3 gap-3 border-t border-border pt-4">
+            <div className="rounded-xl bg-background-hover p-3">
+              <p className="flex items-center gap-1 text-[10px] font-semibold tracking-wide text-text-muted uppercase">
+                <Coins size={11} className="text-primary" />
+                Rata-rata
+              </p>
+              <p className="mt-1 truncate text-sm font-bold text-text-primary">
+                {formatCurrency(stats.rataRata)}
+              </p>
+              <p className="truncate text-[10px] text-text-muted">per pencatatan</p>
+            </div>
+            <div className="rounded-xl bg-background-hover p-3">
+              <p className="flex items-center gap-1 text-[10px] font-semibold tracking-wide text-text-muted uppercase">
+                <TrendingUp size={11} className="text-danger" />
+                Terbesar
+              </p>
+              <p className="mt-1 truncate text-sm font-bold text-text-primary">
+                {formatCurrency(stats.largest)}
+              </p>
+              <p className="truncate text-[10px] text-text-muted">satu pencatatan</p>
+            </div>
+            <div className="rounded-xl bg-background-hover p-3">
+              <p className="flex items-center gap-1 text-[10px] font-semibold tracking-wide text-text-muted uppercase">
+                <Calendar size={11} className="text-primary" />
+                Terakhir
+              </p>
+              <p className="mt-1 truncate text-sm font-bold text-text-primary">
+                {stats.latest ? formatDate(stats.latest.createdAt) : "-"}
+              </p>
+              <p className="truncate text-[10px] text-text-muted">
+                {stats.latest ? `oleh ${stats.latest.processedBy?.nama ?? "-"}` : "belum ada data"}
+              </p>
+            </div>
+          </div>
+
+          {stats.perStaff.length > 0 && (
+            <div className="relative mt-3 border-t border-border pt-4">
+              <p className="mb-2.5 flex items-center gap-1.5 text-[11px] font-semibold text-text-secondary">
+                <UserCircle2 size={13} className="text-primary" />
+                Dicatat Oleh
+              </p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {stats.perStaff.map((staff) => (
+                  <div
+                    key={staff.nama}
+                    className="flex items-center gap-2.5 rounded-xl p-2.5"
+                    style={{ backgroundColor: `${staff.color}0d` }}
+                  >
+                    <span
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                      style={{ backgroundColor: staff.color }}
+                    >
+                      {staff.nama.slice(0, 2).toUpperCase()}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-semibold text-text-primary">
+                        {staff.nama}
+                      </p>
+                      <p className="flex items-baseline gap-1 whitespace-nowrap">
+                        <span className="text-xs font-bold" style={{ color: staff.color }}>
+                          {formatCurrency(staff.total)}
+                        </span>
+                        <span className="text-[10px] font-medium text-text-muted">
+                          ({staff.count}x &middot; {staff.share}%)
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </motion.div>
       </motion.div>
 
@@ -346,6 +448,7 @@ export function PengeluaranPageContent() {
                       title={item.keterangan}
                     >
                       <div className="flex items-center gap-1.5">
+                        <Wallet size={12} className="shrink-0 text-text-muted" />
                         {item.keterangan}
                         {item.editedBy && (
                           <span
@@ -358,14 +461,26 @@ export function PengeluaranPageContent() {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-xs text-text-secondary">
-                      {item.processedBy?.nama ?? "-"}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
+                          {(item.processedBy?.nama ?? "-").slice(0, 2).toUpperCase()}
+                        </span>
+                        <span className="truncate text-xs text-text-secondary">
+                          {item.processedBy?.nama ?? "-"}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-xs text-text-secondary">
-                      {formatDate(item.createdAt)}
+                      <span className="flex items-center gap-1.5">
+                        <Calendar size={11} className="text-text-muted" />
+                        {formatDate(item.createdAt)}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="font-bold text-danger">-{formatCurrency(item.jumlah)}</span>
+                      <span className="inline-flex items-center gap-1 font-bold text-danger">
+                        <TrendingDown size={12} />-{formatCurrency(item.jumlah)}
+                      </span>
                     </td>
                     {canEdit && (
                       <td className="px-4 py-3">
