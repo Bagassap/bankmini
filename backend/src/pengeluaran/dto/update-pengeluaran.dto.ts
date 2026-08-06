@@ -1,5 +1,4 @@
-import { IsEnum, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
-import { KategoriPengeluaran } from '../../generated/prisma/client';
+import { IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
 
 export class UpdatePengeluaranDto {
   @IsNumber()
@@ -9,8 +8,4 @@ export class UpdatePengeluaranDto {
   @IsOptional()
   @IsString()
   keterangan?: string;
-
-  @IsOptional()
-  @IsEnum(KategoriPengeluaran)
-  kategori?: KategoriPengeluaran;
 }

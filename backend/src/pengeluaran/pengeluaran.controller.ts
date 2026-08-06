@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { KategoriPengeluaran, Role } from '../generated/prisma/client';
+import { Role } from '../generated/prisma/client';
 import { PengeluaranService } from './pengeluaran.service';
 import { CreatePengeluaranDto } from './dto/create-pengeluaran.dto';
 import { UpdatePengeluaranDto } from './dto/update-pengeluaran.dto';
@@ -17,13 +17,11 @@ export class PengeluaranController {
 
   @Get()
   findAll(
-    @Query('kategori') kategori?: KategoriPengeluaran,
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('limit') limit?: string,
   ) {
     return this.pengeluaranService.findAll({
-      kategori,
       from: from ? new Date(from) : undefined,
       to: to ? new Date(to) : undefined,
       limit: limit ? Number(limit) : undefined,
@@ -35,7 +33,6 @@ export class PengeluaranController {
   @Roles(Role.teller, Role.co_teller)
   create(@Body() dto: CreatePengeluaranDto, @CurrentUser() user: JwtPayload) {
     return this.pengeluaranService.create({
-      kategori: dto.kategori,
       keterangan: dto.keterangan,
       jumlah: dto.jumlah,
       processedById: resolveStaffId(user),
@@ -52,7 +49,7 @@ export class PengeluaranController {
   ) {
     return this.pengeluaranService.update(
       id,
-      { jumlah: dto.jumlah, keterangan: dto.keterangan, kategori: dto.kategori },
+      { jumlah: dto.jumlah, keterangan: dto.keterangan },
       resolveStaffId(user),
     );
   }

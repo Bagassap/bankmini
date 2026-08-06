@@ -44,14 +44,6 @@ enum AccountType {
   nasabah
 }
 
-enum KategoriPengeluaran {
-  cetak_buku_tabungan
-  atk
-  konsumsi
-  perawatan
-  lainnya
-}
-
 model User {
   id        String    @id @default(uuid())
   username  String    @unique
@@ -134,16 +126,15 @@ model Transaksi {
 }
 
 model Pengeluaran {
-  id            String              @id @default(uuid())
-  kategori      KategoriPengeluaran
+  id            String   @id @default(uuid())
   keterangan    String
-  jumlah        Decimal             @db.Decimal(15, 2)
+  jumlah        Decimal  @db.Decimal(15, 2)
   processedById String
-  processedBy   User                @relation("PengeluaranProcessedBy", fields: [processedById], references: [id])
+  processedBy   User     @relation("PengeluaranProcessedBy", fields: [processedById], references: [id])
   editedById    String?
-  editedBy      User?               @relation("PengeluaranEditedBy", fields: [editedById], references: [id])
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  editedBy      User?    @relation("PengeluaranEditedBy", fields: [editedById], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@map("pengeluaran")
 }

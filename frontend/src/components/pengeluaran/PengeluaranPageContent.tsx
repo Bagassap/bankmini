@@ -21,14 +21,9 @@ import { DateRangePicker } from "@/components/DateRangePicker";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
 import { formatCurrency, formatDate, formatDigitsID } from "@/lib/format";
-import {
-  KATEGORI_PENGELUARAN_COLOR,
-  KATEGORI_PENGELUARAN_ICON,
-  KATEGORI_PENGELUARAN_OPTIONS,
-  kategoriPengeluaranLabel,
-} from "@/lib/pengeluaranMeta";
 import { useAuthStore } from "@/store/authStore";
-import type { KategoriPengeluaran, Pengeluaran } from "@/lib/types";
+import { linkedStaffRole } from "@/lib/role";
+import type { Pengeluaran } from "@/lib/types";
 
 const PAGE_SIZE = 8;
 
@@ -53,11 +48,15 @@ const cardVariants = {
 };
 
 export function PengeluaranPageContent() {
-  const role = useAuthStore((state) => state.user?.role);
-  const canInput = role === "teller" || role === "co_teller";
-  const canEdit = role === "admin" || role === "superadmin";
+  const user = useAuthStore((state) => state.user);
+  // A dual-role login (e.g. a guru who is also a teller) has its primary
+  // `role` set to the nasabah side (jenisNasabah) - the actual staff role
+  // that governs what they can do on this page lives in `linkedStaff.role`
+  // instead. Mirrors the same lookup Sidebar.tsx uses to pick menu groups.
+  const staffRole = user?.accountType === "staff" ? user.role : linkedStaffRole(user);
+  const canInput = staffRole === "teller" || staffRole === "co_teller";
+  const canEdit = staffRole === "admin" || staffRole === "superadmin";
 
-  const [kategoriFilter, setKategoriFilter] = useState<KategoriPengeluaran | "">("");
   const [from, setFrom] = useState(todayIso());
   const [to, setTo] = useState(todayIso());
   const [data, setData] = useState<Pengeluaran[]>([]);
@@ -65,17 +64,11 @@ export function PengeluaranPageContent() {
   const [page, setPage] = useState(1);
 
   const [showCreate, setShowCreate] = useState(false);
-  const [createKategori, setCreateKategori] = useState<KategoriPengeluaran>(
-    KATEGORI_PENGELUARAN_OPTIONS[0],
-  );
   const [createKeterangan, setCreateKeterangan] = useState("");
   const [createJumlah, setCreateJumlah] = useState("");
   const [createSaving, setCreateSaving] = useState(false);
 
   const [editTarget, setEditTarget] = useState<Pengeluaran | null>(null);
-  const [editKategori, setEditKategori] = useState<KategoriPengeluaran>(
-    KATEGORI_PENGELUARAN_OPTIONS[0],
-  );
   const [editKeterangan, setEditKeterangan] = useState("");
   const [editJumlah, setEditJumlah] = useState("");
   const [editSaving, setEditSaving] = useState(false);
@@ -85,7 +78,6 @@ export function PengeluaranPageContent() {
     try {
       const { data: res } = await api.get<Pengeluaran[]>("/pengeluaran", {
         params: {
-          kategori: kategoriFilter || undefined,
           from: from || undefined,
           to: to ? `${to}T23:59:59.999` : undefined,
           limit: 500,
@@ -98,7 +90,7 @@ export function PengeluaranPageContent() {
     } finally {
       setLoading(false);
     }
-  }, [kategoriFilter, from, to]);
+  }, [from, to]);
 
   useEffect(() => {
     loadPengeluaran();
@@ -106,22 +98,7 @@ export function PengeluaranPageContent() {
 
   const stats = useMemo(() => {
     const total = data.reduce((sum, p) => sum + Number(p.jumlah), 0);
-    const perKategoriMap = new Map<KategoriPengeluaran, { count: number; total: number }>();
-    for (const p of data) {
-      const entry = perKategoriMap.get(p.kategori) ?? { count: 0, total: 0 };
-      entry.count += 1;
-      entry.total += Number(p.jumlah);
-      perKategoriMap.set(p.kategori, entry);
-    }
-    const perKategori = Array.from(perKategoriMap.entries())
-      .sort((a, b) => b[1].total - a[1].total)
-      .map(([kategori, entry]) => ({
-        kategori,
-        count: entry.count,
-        total: entry.total,
-        share: total > 0 ? Math.round((entry.total / total) * 100) : 0,
-      }));
-    return { total, count: data.length, perKategori };
+    return { total, count: data.length };
   }, [data]);
 
   const totalPages = Math.max(1, Math.ceil(data.length / PAGE_SIZE));
@@ -129,7 +106,6 @@ export function PengeluaranPageContent() {
 
   function openEdit(item: Pengeluaran) {
     setEditTarget(item);
-    setEditKategori(item.kategori);
     setEditKeterangan(item.keterangan);
     setEditJumlah(String(Math.round(Number(item.jumlah))));
   }
@@ -142,7 +118,6 @@ export function PengeluaranPageContent() {
 
   function closeCreate() {
     setShowCreate(false);
-    setCreateKategori(KATEGORI_PENGELUARAN_OPTIONS[0]);
     setCreateKeterangan("");
     setCreateJumlah("");
   }
@@ -161,7 +136,6 @@ export function PengeluaranPageContent() {
     setCreateSaving(true);
     try {
       await api.post("/pengeluaran", {
-        kategori: createKategori,
         keterangan: createKeterangan.trim(),
         jumlah: jumlahNumber,
       });
@@ -186,7 +160,6 @@ export function PengeluaranPageContent() {
     setEditSaving(true);
     try {
       await api.patch(`/pengeluaran/${editTarget.id}`, {
-        kategori: editKategori,
         jumlah: jumlahNumber,
         keterangan: editKeterangan.trim() || undefined,
       });
@@ -202,35 +175,6 @@ export function PengeluaranPageContent() {
 
   return (
     <Layout>
-      <motion.div
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="mb-5 flex flex-col justify-between gap-4 md:mb-7 md:flex-row md:items-end 2xl:mb-8"
-      >
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary">Pengeluaran Operasional</h1>
-          <p className="text-sm text-text-secondary">
-            {canInput
-              ? "Catat pengeluaran kas Bank Mini untuk kebutuhan operasional (bukan uang nasabah)."
-              : "Pantau seluruh pengeluaran operasional yang dicatat teller."}
-          </p>
-        </div>
-
-        {canInput && (
-          <motion.button
-            type="button"
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => setShowCreate(true)}
-            className="flex w-fit items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary-dark"
-          >
-            <Plus size={16} />
-            Catat Pengeluaran
-          </motion.button>
-        )}
-      </motion.div>
-
       <motion.div
         initial="hidden"
         animate="visible"
@@ -253,39 +197,10 @@ export function PengeluaranPageContent() {
             </span>
             <div>
               <p className="text-sm font-bold">Filter Pengeluaran</p>
-              <p className="text-xs text-white/70">Kategori &amp; rentang tanggal</p>
             </div>
           </div>
 
-          <div className="relative mt-5 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setKategoriFilter("")}
-              className={`rounded-xl px-3 py-2 text-xs font-bold transition-colors ${
-                kategoriFilter === ""
-                  ? "bg-white text-primary shadow-sm"
-                  : "bg-white/10 text-white/80 hover:bg-white/20"
-              }`}
-            >
-              Semua
-            </button>
-            {KATEGORI_PENGELUARAN_OPTIONS.map((k) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => setKategoriFilter(k)}
-                className={`rounded-xl px-3 py-2 text-xs font-bold transition-colors ${
-                  kategoriFilter === k
-                    ? "bg-white text-primary shadow-sm"
-                    : "bg-white/10 text-white/80 hover:bg-white/20"
-                }`}
-              >
-                {kategoriPengeluaranLabel[k]}
-              </button>
-            ))}
-          </div>
-
-          <div className="relative mt-4">
+          <div className="relative mt-5">
             <DateRangePicker from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
           </div>
         </motion.div>
@@ -299,7 +214,7 @@ export function PengeluaranPageContent() {
             className="pointer-events-none absolute inset-0 opacity-[0.03] bg-[radial-gradient(circle,rgba(17,32,240,0.9)_1px,transparent_1px)] bg-size-[16px_16px]"
           />
 
-          <div className="relative mb-5 flex items-center justify-between gap-3">
+          <div className="relative flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-danger/10 text-danger">
                 <TrendingDown size={18} />
@@ -309,50 +224,24 @@ export function PengeluaranPageContent() {
                 <p className="text-xs text-text-secondary">Sesuai filter yang dipilih</p>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-xl font-bold text-danger">{formatCurrency(stats.total)}</p>
-              <p className="text-[11px] text-text-secondary">{stats.count} pencatatan</p>
+            <div className="flex items-center gap-4">
+              {canInput && (
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setShowCreate(true)}
+                  className="flex w-fit items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary-dark"
+                >
+                  <Plus size={16} />
+                  Catat Pengeluaran
+                </motion.button>
+              )}
+              <div className="text-right">
+                <p className="text-xl font-bold text-danger">{formatCurrency(stats.total)}</p>
+                <p className="text-[11px] text-text-secondary">{stats.count} pencatatan</p>
+              </div>
             </div>
-          </div>
-
-          <div className="relative grid grid-cols-2 gap-3 border-t border-border pt-4 sm:grid-cols-3">
-            {stats.perKategori.length === 0 ? (
-              <p className="col-span-2 text-center text-xs text-text-muted sm:col-span-3">
-                Belum ada pengeluaran pada periode ini
-              </p>
-            ) : (
-              stats.perKategori.map((cat) => {
-                const Icon = KATEGORI_PENGELUARAN_ICON[cat.kategori];
-                const color = KATEGORI_PENGELUARAN_COLOR[cat.kategori];
-                return (
-                  <div
-                    key={cat.kategori}
-                    className="flex items-center gap-2.5 rounded-xl p-2.5"
-                    style={{ backgroundColor: `${color}0d` }}
-                  >
-                    <span
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-                      style={{ backgroundColor: `${color}1a`, color }}
-                    >
-                      <Icon size={15} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[11px] font-semibold text-text-secondary">
-                        {kategoriPengeluaranLabel[cat.kategori]}
-                      </p>
-                      <p className="flex items-baseline gap-1 whitespace-nowrap">
-                        <span className="text-xs font-bold text-text-primary">
-                          {formatCurrency(cat.total)}
-                        </span>
-                        <span className="text-[10px] font-medium text-text-muted">
-                          ({cat.share}%)
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                );
-              })
-            )}
           </div>
         </motion.div>
       </motion.div>
@@ -401,9 +290,6 @@ export function PengeluaranPageContent() {
             <thead className="border-b border-border bg-background-hover">
               <tr>
                 <th className="px-4 py-3 text-xs font-bold tracking-wide text-text-muted uppercase">
-                  Kategori
-                </th>
-                <th className="px-4 py-3 text-xs font-bold tracking-wide text-text-muted uppercase">
                   Keterangan
                 </th>
                 <th className="px-4 py-3 text-xs font-bold tracking-wide text-text-muted uppercase">
@@ -429,7 +315,7 @@ export function PengeluaranPageContent() {
             >
               {loading ? (
                 <tr>
-                  <td colSpan={canEdit ? 6 : 5} className="px-4 py-12 text-center">
+                  <td colSpan={canEdit ? 5 : 4} className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center gap-2 text-text-secondary">
                       <Loader2 size={22} className="animate-spin text-primary" />
                       Memuat data pengeluaran...
@@ -438,7 +324,7 @@ export function PengeluaranPageContent() {
                 </tr>
               ) : pagedData.length === 0 ? (
                 <tr>
-                  <td colSpan={canEdit ? 6 : 5} className="px-4 py-12 text-center">
+                  <td colSpan={canEdit ? 5 : 4} className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center gap-2 text-text-secondary">
                       <Receipt size={26} className="text-text-muted" />
                       Tidak ada pengeluaran pada periode ini
@@ -446,70 +332,55 @@ export function PengeluaranPageContent() {
                   </td>
                 </tr>
               ) : (
-                pagedData.map((item) => {
-                  const Icon = KATEGORI_PENGELUARAN_ICON[item.kategori];
-                  const color = KATEGORI_PENGELUARAN_COLOR[item.kategori];
-                  return (
-                    <motion.tr
-                      key={item.id}
-                      variants={{
-                        hidden: { opacity: 0, y: 6 },
-                        visible: { opacity: 1, y: 0, transition: { duration: 0.25 } },
-                      }}
-                      className="border-b border-border transition-colors last:border-0 hover:bg-background-hover"
+                pagedData.map((item) => (
+                  <motion.tr
+                    key={item.id}
+                    variants={{
+                      hidden: { opacity: 0, y: 6 },
+                      visible: { opacity: 1, y: 0, transition: { duration: 0.25 } },
+                    }}
+                    className="border-b border-border transition-colors last:border-0 hover:bg-background-hover"
+                  >
+                    <td
+                      className="max-w-64 truncate px-4 py-3 text-xs text-text-secondary"
+                      title={item.keterangan}
                     >
-                      <td className="px-4 py-3">
-                        <span
-                          className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
-                          style={{ backgroundColor: `${color}1a`, color }}
-                        >
-                          <Icon size={12} />
-                          {kategoriPengeluaranLabel[item.kategori]}
-                        </span>
-                      </td>
-                      <td
-                        className="max-w-52 truncate px-4 py-3 text-xs text-text-secondary"
-                        title={item.keterangan}
-                      >
-                        <div className="flex items-center gap-1.5">
-                          {item.keterangan}
-                          {item.editedBy && (
-                            <span
-                              title={`Diedit oleh ${item.editedBy.nama}`}
-                              className="flex shrink-0 items-center gap-0.5 rounded-full bg-warning/15 px-1.5 py-0.5 text-[9px] font-bold text-warning"
-                            >
-                              <Pencil size={8} />
-                              Diedit
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-text-secondary">
-                        {item.processedBy?.nama ?? "-"}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-text-secondary">
-                        {formatDate(item.createdAt)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="font-bold text-danger">
-                          -{formatCurrency(item.jumlah)}
-                        </span>
-                      </td>
-                      {canEdit && (
-                        <td className="px-4 py-3">
-                          <motion.button
-                            whileTap={{ scale: 0.92 }}
-                            onClick={() => openEdit(item)}
-                            className="flex items-center gap-1 rounded-lg bg-warning/10 px-2.5 py-1.5 text-xs font-bold text-warning transition-colors hover:bg-warning/20"
+                      <div className="flex items-center gap-1.5">
+                        {item.keterangan}
+                        {item.editedBy && (
+                          <span
+                            title={`Diedit oleh ${item.editedBy.nama}`}
+                            className="flex shrink-0 items-center gap-0.5 rounded-full bg-warning/15 px-1.5 py-0.5 text-[9px] font-bold text-warning"
                           >
-                            <Pencil size={12} />
-                            Edit
-                          </motion.button>
-                        </td>
-                      )}
-                    </motion.tr>
-                  );
-                })
+                            <Pencil size={8} />
+                            Diedit
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-text-secondary">
+                      {item.processedBy?.nama ?? "-"}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-text-secondary">
+                      {formatDate(item.createdAt)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-bold text-danger">-{formatCurrency(item.jumlah)}</span>
+                    </td>
+                    {canEdit && (
+                      <td className="px-4 py-3">
+                        <motion.button
+                          whileTap={{ scale: 0.92 }}
+                          onClick={() => openEdit(item)}
+                          className="flex items-center gap-1 rounded-lg bg-warning/10 px-2.5 py-1.5 text-xs font-bold text-warning transition-colors hover:bg-warning/20"
+                        >
+                          <Pencil size={12} />
+                          Edit
+                        </motion.button>
+                      </td>
+                    )}
+                  </motion.tr>
+                ))
               )}
             </motion.tbody>
           </table>
@@ -562,23 +433,6 @@ export function PengeluaranPageContent() {
               </div>
 
               <form onSubmit={submitCreate} className="relative flex flex-col gap-4">
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
-                    Kategori
-                  </label>
-                  <select
-                    value={createKategori}
-                    onChange={(e) => setCreateKategori(e.target.value as KategoriPengeluaran)}
-                    className={inputClass}
-                  >
-                    {KATEGORI_PENGELUARAN_OPTIONS.map((k) => (
-                      <option key={k} value={k}>
-                        {kategoriPengeluaranLabel[k]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                     Jumlah
@@ -686,23 +540,6 @@ export function PengeluaranPageContent() {
               </div>
 
               <form onSubmit={submitEdit} className="relative flex flex-col gap-4">
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
-                    Kategori
-                  </label>
-                  <select
-                    value={editKategori}
-                    onChange={(e) => setEditKategori(e.target.value as KategoriPengeluaran)}
-                    className={inputClass}
-                  >
-                    {KATEGORI_PENGELUARAN_OPTIONS.map((k) => (
-                      <option key={k} value={k}>
-                        {kategoriPengeluaranLabel[k]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-text-secondary">
                     Jumlah

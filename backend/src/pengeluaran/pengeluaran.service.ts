@@ -4,23 +4,17 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  KategoriPengeluaran,
-  Pengeluaran,
-  Prisma,
-} from '../generated/prisma/client';
+import { Pengeluaran, Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { wibDayRangeFromDateOnly } from '../common/wib-date';
 
 export interface CreatePengeluaranInput {
-  kategori: KategoriPengeluaran;
   keterangan: string;
   jumlah: number;
   processedById: string;
 }
 
 export interface PengeluaranFilter {
-  kategori?: KategoriPengeluaran;
   from?: Date;
   to?: Date;
   limit?: number;
@@ -39,7 +33,6 @@ export class PengeluaranService {
     try {
       return await this.prisma.pengeluaran.create({
         data: {
-          kategori: input.kategori,
           keterangan: input.keterangan,
           jumlah: new Prisma.Decimal(input.jumlah),
           processedById: input.processedById,
@@ -54,7 +47,6 @@ export class PengeluaranService {
   async findAll(filter: PengeluaranFilter = {}) {
     try {
       const where: Prisma.PengeluaranWhereInput = {};
-      if (filter.kategori) where.kategori = filter.kategori;
       if (filter.from || filter.to) {
         where.createdAt = {
           ...(filter.from
@@ -80,7 +72,6 @@ export class PengeluaranService {
     data: {
       jumlah: number;
       keterangan?: string;
-      kategori?: KategoriPengeluaran;
     },
     editedById: string,
   ): Promise<Pengeluaran> {
@@ -100,7 +91,6 @@ export class PengeluaranService {
         data: {
           jumlah: newJumlah,
           keterangan: data.keterangan ?? existing.keterangan,
-          kategori: data.kategori ?? existing.kategori,
           editedById,
         },
         include: INCLUDE,
