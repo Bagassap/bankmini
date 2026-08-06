@@ -348,30 +348,52 @@ export function AkunPageContent() {
             {
               label: "Total Akun",
               value: akunList.length,
+              caption: "Seluruh staf terdaftar",
+              progressPct: 100,
               icon: Users,
               gradient: "from-primary to-primary-dark",
             },
             {
               label: "Superadmin",
               value: roleCounts.superadmin,
+              caption: "Akses penuh sistem",
+              progressPct:
+                akunList.length > 0
+                  ? Math.round((roleCounts.superadmin / akunList.length) * 100)
+                  : 0,
               icon: ShieldCheck,
               gradient: ROLE_GRADIENT.superadmin,
             },
             {
               label: "Admin",
               value: roleCounts.admin,
+              caption: "Kelola nasabah & laporan",
+              progressPct:
+                akunList.length > 0
+                  ? Math.round((roleCounts.admin / akunList.length) * 100)
+                  : 0,
               icon: UserCog,
               gradient: "from-gradient-blue-from to-gradient-blue-to",
             },
             {
               label: "Teller",
               value: roleCounts.teller,
+              caption: "Input transaksi harian",
+              progressPct:
+                akunList.length > 0
+                  ? Math.round((roleCounts.teller / akunList.length) * 100)
+                  : 0,
               icon: Users,
               gradient: ROLE_GRADIENT.teller,
             },
             {
               label: "Co Teller",
               value: roleCounts.co_teller,
+              caption: "Bantu transaksi teller",
+              progressPct:
+                akunList.length > 0
+                  ? Math.round((roleCounts.co_teller / akunList.length) * 100)
+                  : 0,
               icon: UserCheck,
               gradient: ROLE_GRADIENT.co_teller,
             },
@@ -390,14 +412,35 @@ export function AkunPageContent() {
               aria-hidden
               className="pointer-events-none absolute inset-0 opacity-20 bg-[radial-gradient(circle,rgba(255,255,255,0.7)_1px,transparent_1px)] bg-size-[12px_12px]"
             />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -top-6 -right-6 h-16 w-16 rounded-full bg-white/10 blur-xl"
+            />
             <div className="relative min-w-0">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
-                <stat.icon size={15} />
-              </span>
-              <p className="mt-2 text-xl font-bold">{stat.value}</p>
-              <p className="truncate text-[11px] font-semibold text-white/80">
-                {stat.label}
-              </p>
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
+                  <stat.icon size={15} />
+                </span>
+                <div className="min-w-0 leading-tight">
+                  <p className="text-xl font-bold">{stat.value}</p>
+                  <p className="truncate text-[11px] font-semibold text-white/85">
+                    {stat.label}
+                  </p>
+                </div>
+              </div>
+              <p className="mt-2 truncate text-[10px] text-white/60">{stat.caption}</p>
+              <div className="mt-2.5">
+                <div className="mb-1 flex items-center justify-between text-[9px] text-white/70">
+                  <span>Porsi staf</span>
+                  <span className="font-bold text-white">{stat.progressPct}%</span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/20">
+                  <div
+                    className="h-full rounded-full bg-white transition-[width] duration-700"
+                    style={{ width: `${Math.min(100, Math.max(0, stat.progressPct))}%` }}
+                  />
+                </div>
+              </div>
             </div>
           </motion.div>
         ))}
@@ -473,13 +516,13 @@ export function AkunPageContent() {
                   type="button"
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setRoleFilter(opt.value)}
-                  className="relative rounded-full px-3.5 py-1.5 text-xs font-semibold"
+                  className="relative rounded-md px-3.5 py-1.5 text-xs font-semibold"
                 >
                   {active && (
                     <motion.span
                       layoutId="role-pill-active"
                       transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                      className="absolute inset-0 rounded-full shadow-sm"
+                      className="absolute inset-0 rounded-md shadow-sm"
                       style={{ backgroundColor: color }}
                     />
                   )}
@@ -528,13 +571,13 @@ export function AkunPageContent() {
                   type="button"
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setStatusFilter(opt.value)}
-                  className="relative rounded-full px-3.5 py-1.5 text-xs font-semibold"
+                  className="relative rounded-md px-3.5 py-1.5 text-xs font-semibold"
                 >
                   {active && (
                     <motion.span
                       layoutId="status-pill-active"
                       transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                      className="absolute inset-0 rounded-full bg-success shadow-sm"
+                      className="absolute inset-0 rounded-md bg-success shadow-sm"
                     />
                   )}
                   <span
