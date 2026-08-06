@@ -77,11 +77,6 @@ export class TransaksiController {
     @Query('from') from?: string,
     @Query('to') to?: string,
   ) {
-    // Only block a *pure* nasabah (no linked staff role) from viewing
-    // someone else's mutasi - a dual-role login (e.g. teller/admin logging
-    // in with their NPY) still has accountType 'nasabah' as its primary
-    // identity, but must be able to look up any nasabah's mutasi like any
-    // other staff member.
     const isPureNasabah = user.accountType === 'nasabah' && !user.linkedStaff;
     if (isPureNasabah && user.id !== nasabahId) {
       throw new ForbiddenException('Tidak dapat mengakses mutasi nasabah lain');

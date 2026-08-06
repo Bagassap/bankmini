@@ -89,7 +89,6 @@ const TELLER_MENU_GROUPS: MenuGroup[] = [
   },
 ];
 
-// Same as teller, minus Simpanan and Piutang access.
 const CO_TELLER_MENU_GROUPS: MenuGroup[] = TELLER_MENU_GROUPS.filter(
   (group) => group.label !== "Simpanan" && group.label !== "Piutang",
 );
@@ -162,9 +161,6 @@ const WALI_KELAS_MENU_GROUPS: MenuGroup[] = [
   },
 ];
 
-// Relabels a menu group's first entry so combined (dual-role) sidebars can
-// clearly mark where each portal's menu starts, e.g. "Portal Nasabah" then
-// later "Panel Superadmin" - without duplicating "Menu Utama" twice.
 function withSectionLabel(groups: MenuGroup[], label: string): MenuGroup[] {
   if (groups.length === 0) return groups;
   return [{ ...groups[0], label }, ...groups.slice(1)];
@@ -224,9 +220,6 @@ export default function Sidebar({
   const menuGroups = useMemo(() => {
     if (isNasabahRole(user)) {
       if (!staffRole) return baseNasabahGroups;
-      // Staff panel first, nasabah portal last - a dual-role person mostly
-      // works from their staff panel, with the personal nasabah account as
-      // a secondary area rather than the default landing set of menus.
       return [
         ...withSectionLabel(STAFF_MENU_BY_ROLE[staffRole], STAFF_SECTION_LABEL[staffRole]),
         ...withSectionLabel(baseNasabahGroups, "Portal Nasabah"),
@@ -238,10 +231,6 @@ export default function Sidebar({
     return TELLER_MENU_GROUPS;
   }, [user, staffRole, baseNasabahGroups]);
 
-  // Track the active item by href, not label - multiple sections can have
-  // an item literally called "Dashboard" (nasabah portal vs staff panel),
-  // and matching by label made both light up at once, confusing the shared
-  // layoutId pill animation into jumping between them on every navigation.
   const [activeHref, setActiveHref] = useState("");
 
   useEffect(() => {

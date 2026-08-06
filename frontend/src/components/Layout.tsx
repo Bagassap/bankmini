@@ -45,9 +45,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       const staffRole = linkedStaffRole(user);
 
       if (staffRole) {
-        // Dual-role login (NPY grants both the nasabah portal and their
-        // linked staff panel in one session) - allow either area instead
-        // of confining them to /portal like a plain nasabah account.
         const inStaffArea = isTellerTierRoleValue(staffRole)
           ? !pathname.startsWith("/portal") && !pathname.startsWith("/admin")
           : pathname.startsWith("/admin");

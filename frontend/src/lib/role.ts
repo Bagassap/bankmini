@@ -8,9 +8,6 @@ export function isCoTellerRole(user: User | null): boolean {
   return user?.role === "co_teller";
 }
 
-// Any non-admin staff tier confined to the teller-style dashboard area
-// (/dashboard, not /admin) - co_teller is teller minus Simpanan/Piutang, but
-// shares the same area/route-guard behavior as a plain teller.
 export function isTellerTierRole(user: User | null): boolean {
   return user?.role === "teller" || user?.role === "co_teller";
 }

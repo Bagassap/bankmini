@@ -23,9 +23,6 @@ export interface User {
   role: Role | JenisNasabah;
   accountType: AccountType;
   noRekening?: string;
-  // Present when this nasabah account is also linked to a staff account
-  // (e.g. a guru who is also admin/teller/superadmin) - one NPY login
-  // grants both the nasabah portal and the staff panel in one session.
   linkedStaff?: LinkedStaffInfo | null;
 }
 

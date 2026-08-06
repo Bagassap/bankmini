@@ -14,12 +14,6 @@ function cookieOptions() {
     sameSite: 'lax' as const,
     secure: process.env.NODE_ENV === 'production',
     path: '/',
-    // No maxAge/expires: makes it a browser session cookie, cleared when
-    // the browser is fully closed (not just the tab) so the user must log
-    // in again next time. Backed by a server-side session (see
-    // AuthService.touchSession/logout) so a copied/replayed token stops
-    // working the moment the session is revoked or goes idle, regardless
-    // of whether the browser actually dropped the cookie.
   };
 }
 

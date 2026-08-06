@@ -87,9 +87,6 @@ const JENIS_PEMBAYARAN_LABEL: Record<JenisPembayaranAngsuran, string> = {
   pelunasan: "Pelunasan (Pokok + Jasa)",
 };
 
-// Client-side mirror of PiutangService's calculation, used only to render a
-// live preview before submitting - the server independently recomputes and
-// locks in the authoritative numbers, this is never sent as-is.
 function computePreview(jumlahPinjaman: number, jenisPiutang: JenisPiutang, tenor: number) {
   if (jumlahPinjaman <= 0 || tenor <= 0) return null;
   const persentaseJasa = jenisPiutang === "bulanan" ? 1 : 1.5;
@@ -139,10 +136,6 @@ const heroCardVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] as const } },
 };
 
-// Mirrors Laporan's own period definitions (Harian/Mingguan/Bulanan) so a
-// download from either page means the same lookback window - filtered here
-// by tanggalPinjam since, unlike Simpanan's per-nasabah cumulative totals,
-// each Piutang row is a discrete loan event with its own date.
 const DOWNLOAD_OPTIONS = [
   {
     key: "harian" as const,
@@ -174,10 +167,6 @@ const COMPACT_TONE_GRADIENT = {
   cyan: "from-gradient-blue-from to-gradient-blue-to",
 } as const;
 
-// A deliberately smaller sibling to GradientStatCard (which is sized for
-// full dashboard-style summaries) - Piutang packs 4 of these next to the
-// hero ring card in a 2x2 grid, so they stay compact instead of towering
-// over it or stretching into an odd wide/short shape.
 function CompactStatCard({
   tone,
   label,
@@ -291,10 +280,6 @@ export function PiutangPageContent() {
       )
       .filter((r) => (statusFilter === "semua" ? true : r.status === statusFilter));
 
-    // Each debitur's earliest loan date in view - groups (and the rows
-    // within them) then sort oldest-first, so the newest piutang overall
-    // ends up at the bottom while a person's multiple loans still sit next
-    // to each other (required for the "don't repeat the name/NO" display).
     const earliestByDebitur = new Map<string, number>();
     for (const r of rows) {
       const t = new Date(r.tanggalPinjam).getTime();
@@ -310,9 +295,6 @@ export function PiutangPageContent() {
     });
   }, [ringkasan, search, statusFilter]);
 
-  // NO only increments when moving to a different debitur - a person's other
-  // loans share the same number as their first row, mirroring the blanked
-  // name/avatar cell below them.
   const numberedDisplayList = useMemo(() => {
     const debtorOrder = new Map<string, number>();
     for (const item of displayList) {
@@ -473,9 +455,6 @@ export function PiutangPageContent() {
         rangeStart = startOfWibDay(year, month, 1);
       }
 
-      // Grouped by debitur, same as the on-screen table, so a repeated name
-      // (and NO) can be blanked out below instead of being rewritten every
-      // row - oldest debitur group first, Pinjaman Ke-I before Ke-II within it.
       const periodRows = ringkasan.filter((r) => new Date(r.tanggalPinjam) >= rangeStart);
       const earliestByDebitur = new Map<string, number>();
       for (const r of periodRows) {
@@ -705,7 +684,6 @@ export function PiutangPageContent() {
           progressLabel="Dari total dipinjamkan"
         />
       </motion.div>
-
 
       <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <motion.div
@@ -1055,7 +1033,6 @@ export function PiutangPageContent() {
         </div>
       </motion.div>
 
-      {/* Modal Tambah Piutang */}
       <AnimatePresence>
         {showAddModal && (
           <motion.div
@@ -1328,7 +1305,6 @@ export function PiutangPageContent() {
         )}
       </AnimatePresence>
 
-      {/* Modal Angsuran */}
       <AnimatePresence>
         {angsuranTarget &&
           (() => {
@@ -1580,7 +1556,6 @@ export function PiutangPageContent() {
           })()}
       </AnimatePresence>
 
-      {/* Modal Riwayat Angsuran */}
       <AnimatePresence>
         {historyTarget && (
           <motion.div

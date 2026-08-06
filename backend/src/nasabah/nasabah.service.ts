@@ -157,9 +157,6 @@ export class NasabahService {
   private async generateNoRekening(
     tx: PrismaClientOrTx = this.prisma,
   ): Promise<string> {
-    // No Rekening carries the registration date - must be the WIB calendar
-    // day, not the server's own (UTC) system date, otherwise accounts opened
-    // between 00:00-07:00 WIB would be stamped with the previous day.
     const { year, month, day } = wibDateParts();
     const yy = String(year).slice(-2);
     const mm = String(month + 1).padStart(2, '0');

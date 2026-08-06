@@ -381,9 +381,6 @@ export function NasabahPageContent() {
     return () => clearTimeout(timeout);
   }, [activeTab, jenisFilter, search]);
 
-  // Distinct kelas values among siswa currently loaded, for the class
-  // picker below - lets a teacher jump straight to one class instead of
-  // paging through all students in kelas-grouped order.
   const kelasOptions = useMemo(() => {
     const set = new Set<string>();
     nasabahList.forEach((n) => {
@@ -403,9 +400,6 @@ export function NasabahPageContent() {
       if (sortBy === "saldo") return Number(b.saldo) - Number(a.saldo);
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-    // Group siswa by kelas - JS's sort is stable, so re-sorting by kelas on
-    // top of the result above keeps each kelas group internally ordered by
-    // whatever sortBy the user picked.
     if (jenisFilter === "siswa") {
       return sorted.sort((a, b) => (a.kelas ?? "").localeCompare(b.kelas ?? ""));
     }

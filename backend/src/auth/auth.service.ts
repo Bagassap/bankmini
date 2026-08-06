@@ -58,12 +58,6 @@ export class AuthService {
     try {
       const staff = await this.usersService.findByUsername(input.username);
       if (staff) {
-        // A staff username that is also someone's nasabah No Rekening means
-        // this is a dual-role account (e.g. admin who is also a guru) -
-        // that person now logs in with their NPY/NIS only, which grants
-        // both sides at once. Their old staff username is superseded, so
-        // fall through (it won't match any nasabah username either, which
-        // correctly ends in "invalid credentials" for a No Rekening login).
         const linkedNasabah = await this.nasabahService.findByNoRekeningOrNull(
           staff.username,
         );
@@ -139,12 +133,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Revokes the session tied to the given access token, if any. Called on
-   * logout so the session is invalidated server-side rather than relying
-   * solely on the browser dropping its cookie. Silently no-ops on an
-   * invalid/expired/missing token so logout stays idempotent.
-   */
   async logout(token?: string): Promise<void> {
     if (!token) return;
     try {
@@ -154,16 +142,9 @@ export class AuthService {
         data: { revokedAt: new Date() },
       });
     } catch {
-      // Invalid/expired token: nothing to revoke.
     }
   }
 
-  /**
-   * Validates that a session is still alive (not revoked, not idle beyond
-   * the configured timeout) and slides its expiry forward. Throws when the
-   * session should no longer be trusted, forcing the client to log in
-   * again even if it still holds an unexpired JWT.
-   */
   async touchSession(sessionId: string): Promise<void> {
     const session = await this.prisma.session.findUnique({
       where: { id: sessionId },

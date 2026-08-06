@@ -12,9 +12,6 @@ const REDIRECT_DELAY_MS = 3600;
 const TITLE_LINE_1 = "Bank Mini";
 const TITLE_LINE_2 = "NUSA";
 
-// Asks the server whether the session cookie is still valid rather than
-// trusting anything cached client-side - this is also what makes a closed
-// (and reopened) browser land back on /login once the session has expired.
 async function resolveDestination(): Promise<string> {
   await useAuthStore.getState().hydrate();
   const { status, user } = useAuthStore.getState();

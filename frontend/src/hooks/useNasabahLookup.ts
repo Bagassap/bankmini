@@ -13,9 +13,6 @@ export function useNasabahLookup() {
   const [suggestions, setSuggestions] = useState<Nasabah[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
-  // Lets teller find an account by name too (not just an exact No Rekening) -
-  // e.g. the pooled kelas account has no card/number anyone memorizes, so
-  // typing "kelas" or the class name needs to surface it as a suggestion.
   useEffect(() => {
     if (nasabah || noRekening.trim().length < 2) {
       setSuggestions([]);

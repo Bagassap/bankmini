@@ -55,10 +55,6 @@ const STAFF_COLORS = ["#1120f0", "#22c55e", "#ea580c", "#a78bfa", "#0d9488", "#f
 
 export function PengeluaranPageContent() {
   const user = useAuthStore((state) => state.user);
-  // A dual-role login (e.g. a guru who is also a teller) has its primary
-  // `role` set to the nasabah side (jenisNasabah) - the actual staff role
-  // that governs what they can do on this page lives in `linkedStaff.role`
-  // instead. Mirrors the same lookup Sidebar.tsx uses to pick menu groups.
   const staffRole = user?.accountType === "staff" ? user.role : linkedStaffRole(user);
   const canInput = staffRole === "teller" || staffRole === "co_teller";
   const canEdit = staffRole === "admin" || staffRole === "superadmin";

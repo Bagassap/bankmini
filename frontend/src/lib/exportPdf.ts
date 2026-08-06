@@ -31,12 +31,6 @@ function formatRupiah(value: number): string {
   return `${sign}Rp ${Math.round(Math.abs(value)).toLocaleString("id-ID")}`;
 }
 
-// jsPDF's embedded-TTF text renderer (used for the Satoshi brand font) can
-// silently truncate a cell's text right after a U+00A0 non-breaking space -
-// e.g. the NBSP that Intl.NumberFormat's `style: "currency"` inserts between
-// "Rp" and the digits. Every string handed to a table cell goes through
-// here so that bug class can't resurface even if a future caller passes in
-// a currency-formatted string instead of building it with formatRupiah().
 function sanitizeForPdf(text: string): string {
   return text.replace(/ /g, " ");
 }
@@ -80,7 +74,6 @@ export async function downloadLaporanPdf(
     return currentY;
   }
 
-  // ---- Header ----
   doc.setFont(FONT, "bold");
   doc.setFontSize(16);
   doc.setTextColor(...COLOR_PRIMARY);
@@ -168,7 +161,6 @@ export async function downloadLaporanPdf(
       margin: { left: marginX, right: marginX },
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const afterTableY = (doc as any).lastAutoTable.finalY as number;
     y = ensureSpace(afterTableY + 10, 30);
 
@@ -213,7 +205,6 @@ export async function downloadLaporanPdf(
     cursorY,
   );
 
-  // ---- Ringkasan saldo ----
   const summaryHeight = 92;
   cursorY = ensureSpace(cursorY, summaryHeight + 10);
 
@@ -284,7 +275,7 @@ export interface SimpananPdfInput {
 
 const NAMA_BANK = "BANK MINI NUSA";
 const NAMA_SEKOLAH = "SMK MA'ARIF NU 01 LIMPUNG";
-const MARGIN_2CM = 57; // ~2cm at 72pt/inch
+const MARGIN_2CM = 57;
 const COLOR_BORDER_DARK: [number, number, number] = [71, 85, 105];
 
 export async function downloadSimpananPdf(
@@ -307,7 +298,6 @@ export async function downloadSimpananPdf(
     });
   }
 
-  // ---- Header: 4 centered lines ----
   doc.setFont(FONT, "bold");
   doc.setTextColor(...COLOR_INK);
   doc.setFontSize(14);
@@ -409,13 +399,8 @@ export async function downloadSimpananPdf(
 }
 
 export interface PiutangPdfRow {
-  // Pre-formatted by the caller: blank when this row is the same debitur as
-  // the row above it, so NO only increments per-debitur, not per-row.
   noLabel: string;
   nama: string;
-  // "I", "II", ... for Bulanan (roman numeral loan cycle) or "Berkala" for
-  // that jenis - pre-formatted by the caller since the PDF layer shouldn't
-  // need to know the roman-numeral/jenis-label rules itself.
   pinjamanKeLabel: string;
   jumlahPinjaman: number;
   totalAngsuran: number;
@@ -430,9 +415,6 @@ export interface PiutangPdfInput {
   rows: PiutangPdfRow[];
 }
 
-// This table has 8 columns (5 of them currency) - portrait A4 is too narrow
-// to keep them legible at a readable font size, so this report uses
-// landscape unlike the other Simpanan reports.
 export async function downloadPiutangPdf(
   input: PiutangPdfInput,
   filename: string,
@@ -453,7 +435,6 @@ export async function downloadPiutangPdf(
     });
   }
 
-  // ---- Header: 4 centered lines ----
   doc.setFont(FONT, "bold");
   doc.setTextColor(...COLOR_INK);
   doc.setFontSize(14);
@@ -604,7 +585,6 @@ export async function downloadSimpananHariRayaPdf(
     });
   }
 
-  // ---- Header: 4 centered lines ----
   doc.setFont(FONT, "bold");
   doc.setTextColor(...COLOR_INK);
   doc.setFontSize(14);

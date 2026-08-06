@@ -168,7 +168,6 @@ export default function PortalKelasPage() {
         <p className="text-sm text-text-secondary">Memuat data...</p>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:gap-6 2xl:gap-7.5 lg:grid-cols-[360px_1fr]">
-          {/* Kolom kiri: kartu-kartu saldo, masing-masing di barisnya sendiri */}
           <div className="space-y-4 md:space-y-6">
             <motion.div
               initial={{ opacity: 0, y: -10 }}
@@ -294,7 +293,6 @@ export default function PortalKelasPage() {
             )}
           </div>
 
-          {/* Kolom kanan: tabel siswa, disejajarkan horizontal dengan kartu-kartu */}
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
