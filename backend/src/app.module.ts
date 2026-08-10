@@ -12,6 +12,7 @@ import { TransaksiModule } from './transaksi/transaksi.module';
 import { SimpananModule } from './simpanan/simpanan.module';
 import { PiutangModule } from './piutang/piutang.module';
 import { PengeluaranModule } from './pengeluaran/pengeluaran.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { PengeluaranModule } from './pengeluaran/pengeluaran.module';
     SimpananModule,
     PiutangModule,
     PengeluaranModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: JwtAuthGuard }],

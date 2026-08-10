@@ -507,7 +507,7 @@ export function LaporanPageContent() {
         initial="hidden"
         animate="visible"
         variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.08 } } }}
-        className="mb-4 grid grid-cols-2 gap-4 md:mb-6 lg:grid-cols-4 2xl:mb-7.5"
+        className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:mb-6 lg:grid-cols-5 2xl:mb-7.5"
       >
         {stats.map((stat) => (
           <StatCard key={stat.label} {...stat} />

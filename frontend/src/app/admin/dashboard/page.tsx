@@ -28,9 +28,7 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
 import { formatFullDateID, formatTimeShort, getWibHour } from "@/lib/format";
 import { useAuthStore } from "@/store/authStore";
-import type { NasabahStats, Transaksi, TransaksiStats } from "@/lib/types";
-
-const KAS_UTAMA_DUMMY = 250_000_000;
+import type { KasUtamaResult, NasabahStats, Transaksi, TransaksiStats } from "@/lib/types";
 
 const statsContainerVariants = {
   hidden: {},
@@ -44,6 +42,7 @@ export default function AdminDashboardPage() {
   const [transaksiStats, setTransaksiStats] = useState<TransaksiStats | null>(
     null,
   );
+  const [kasUtama, setKasUtama] = useState<KasUtamaResult | null>(null);
   const [recent, setRecent] = useState<Transaksi[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -54,13 +53,15 @@ export default function AdminDashboardPage() {
     if (isManualRefresh) setRefreshing(true);
     else setLoading(true);
     try {
-      const [nasabahRes, transaksiRes, recentRes] = await Promise.all([
+      const [nasabahRes, transaksiRes, kasUtamaRes, recentRes] = await Promise.all([
         api.get<NasabahStats>("/nasabah/stats"),
         api.get<TransaksiStats>("/transaksi/stats"),
+        api.get<KasUtamaResult>("/dashboard/kas-utama"),
         api.get<Transaksi[]>("/transaksi", { params: { limit: 5 } }),
       ]);
       setNasabahStats(nasabahRes.data);
       setTransaksiStats(transaksiRes.data);
+      setKasUtama(kasUtamaRes.data);
       setRecent(recentRes.data);
       setLastUpdated(new Date());
     } catch (error) {
@@ -217,11 +218,13 @@ export default function AdminDashboardPage() {
             <GradientStatCard
               tone="orange"
               label="Kas Utama"
-              value={KAS_UTAMA_DUMMY}
-              caption="Saldo ledger kas fisik (sementara)"
+              value={kasUtama?.total ?? 0}
+              caption="Transaksi, simpanan, piutang & pengeluaran"
               icon={Wallet}
-              secondaryLabel="Menunggu integrasi API kas"
-              secondaryIcon={AlertCircle}
+              secondaryLabel={
+                (kasUtama?.total ?? 0) >= 0 ? "Kas positif" : "Kas negatif"
+              }
+              secondaryIcon={(kasUtama?.total ?? 0) >= 0 ? TrendingUp : AlertCircle}
             />
             <GradientStatCard
               tone="blue"

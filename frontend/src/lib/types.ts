@@ -129,6 +129,19 @@ export interface TransaksiStats {
   totalTransaksi: number;
 }
 
+export interface KasUtamaResult {
+  total: number;
+  breakdown: {
+    totalSetor: number;
+    totalTarik: number;
+    totalSimpanan: number;
+    totalPencairanHariRaya: number;
+    totalPiutangDicairkan: number;
+    totalAngsuranMasuk: number;
+    totalPengeluaran: number;
+  };
+}
+
 export interface SimpananRingkasanItem {
   nasabahId: string;
   nama: string;
