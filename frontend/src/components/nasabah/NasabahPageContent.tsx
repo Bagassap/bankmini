@@ -529,41 +529,121 @@ export function NasabahPageContent() {
   function addSaldoSheet(
     workbook: ExcelJS.Workbook,
     sheetName: string,
+    sheetTitle: string,
     rows: Nasabah[],
-    idLabel: "NIS" | "NIP",
-    idField: "nis" | "nip",
+    idLabel: string,
+    idValue: (n: Nasabah) => string,
+    showJabatan = false,
   ) {
-    const sheet = workbook.addWorksheet(sheetName);
-    sheet.columns = [
-      { header: "No Rekening", key: "noRekening", width: 16 },
-      { header: "Nama", key: "nama", width: 32 },
-      { header: idLabel, key: "idNumber", width: 16 },
-      { header: "Saldo", key: "saldo", width: 18 },
-      { header: "Status", key: "status", width: 12 },
-      { header: "Terdaftar", key: "createdAt", width: 18 },
+    const PRIMARY = "FF1120F0";
+    const PRIMARY_DARK = "FF0D1AC0";
+    const SUCCESS = "FF10B981";
+    const SUCCESS_BG = "FFD1FAE5";
+    const DANGER_BG = "FFFEE2E2";
+    const DANGER = "FFDC2626";
+    const BAND = "FFF3F4FF";
+    const BORDER = "FFE2E8F0";
+
+    const columnDefs = [
+      { key: "noRekening", width: 18 },
+      { key: "nama", width: 32 },
+      { key: "idNumber", width: 18 },
+      { key: "saldo", width: 20 },
+      { key: "status", width: 14 },
+      { key: "createdAt", width: 20 },
+      ...(showJabatan ? [{ key: "jabatan", width: 34 }] : []),
     ];
-    sheet.getRow(1).font = { bold: true };
-    sheet.getRow(1).fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FFE5E7FF" },
-    };
-    rows.forEach((n) => {
-      sheet.addRow({
+    const sheet = workbook.addWorksheet(sheetName, {
+      views: [{ state: "frozen", ySplit: 3 }],
+    });
+    sheet.columns = columnDefs;
+
+    const thinBorder: ExcelJS.Border = { style: "thin", color: { argb: BORDER } };
+
+    sheet.mergeCells(1, 1, 1, columnDefs.length);
+    const titleCell = sheet.getCell(1, 1);
+    titleCell.value = `Bank Mini NUSA — ${sheetTitle}`;
+    titleCell.font = { bold: true, size: 14, color: { argb: "FFFFFFFF" } };
+    titleCell.alignment = { vertical: "middle", horizontal: "left" };
+    sheet.getRow(1).height = 28;
+    for (let c = 1; c <= columnDefs.length; c++) {
+      sheet.getCell(1, c).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: PRIMARY },
+      };
+    }
+
+    const headerLabels = [
+      "No Rekening",
+      "Nama",
+      idLabel,
+      "Saldo (Rp)",
+      "Status",
+      "Terdaftar",
+      ...(showJabatan ? ["Jabatan"] : []),
+    ];
+    const headerRow = sheet.getRow(2);
+    headerLabels.forEach((label, i) => {
+      const cell = headerRow.getCell(i + 1);
+      cell.value = label;
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: PRIMARY_DARK } };
+      cell.alignment = { vertical: "middle", horizontal: i === 3 ? "right" : "left" };
+      cell.border = { bottom: { style: "medium", color: { argb: PRIMARY_DARK } } };
+    });
+    headerRow.height = 20;
+    sheet.autoFilter = { from: { row: 2, column: 1 }, to: { row: 2, column: columnDefs.length } };
+
+    rows.forEach((n, i) => {
+      const row = sheet.addRow({
         noRekening: n.noRekening,
         nama: n.nama,
-        idNumber: n[idField] ?? "-",
+        idNumber: idValue(n),
         saldo: Number(n.saldo),
         status: n.status === "aktif" ? "Aktif" : "Nonaktif",
         createdAt: formatDate(n.createdAt),
+        ...(showJabatan ? { jabatan: n.jabatan ?? "Guru" } : {}),
+      });
+      const isAktif = n.status === "aktif";
+      row.eachCell((cell, colNumber) => {
+        cell.border = {
+          top: thinBorder,
+          bottom: thinBorder,
+          left: thinBorder,
+          right: thinBorder,
+        };
+        if (i % 2 === 1) {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BAND } };
+        }
+        if (colNumber === 4) {
+          cell.numFmt = "#,##0";
+          cell.alignment = { horizontal: "right" };
+        }
+        if (colNumber === 5) {
+          cell.font = { bold: true, color: { argb: isAktif ? SUCCESS : DANGER } };
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: isAktif ? SUCCESS_BG : DANGER_BG },
+          };
+          cell.alignment = { horizontal: "center" };
+        }
       });
     });
-    sheet.getColumn("saldo").numFmt = "#,##0";
+
     const totalRow = sheet.addRow({
-      nama: "Total",
+      nama: `Total (${rows.length} nasabah)`,
       saldo: rows.reduce((sum, n) => sum + Number(n.saldo), 0),
     });
-    totalRow.font = { bold: true };
+    totalRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: PRIMARY } };
+      if (colNumber === 4) {
+        cell.numFmt = "#,##0";
+        cell.alignment = { horizontal: "right" };
+      }
+    });
   }
 
   async function exportSaldoExcel() {
@@ -574,12 +654,27 @@ export function NasabahPageContent() {
       workbook.created = new Date();
 
       if (activeTab === "sekolah") {
-        const [guruRes, siswaRes] = await Promise.all([
+        const [guruRes, waliKelasRes, siswaRes] = await Promise.all([
           api.get<Nasabah[]>("/nasabah", { params: { jenis: "guru" } }),
+          api.get<Nasabah[]>("/nasabah", { params: { jenis: "wali_kelas" } }),
           api.get<Nasabah[]>("/nasabah", { params: { jenis: "siswa" } }),
         ]);
 
-        addSaldoSheet(workbook, "Guru", guruRes.data, "NIP", "nip");
+        // Wali kelas adalah guru juga (cuma beda tanggung jawab) - gabung ke
+        // satu sheet "Guru" yang sama, bukan dipisah, supaya semua nasabah
+        // guru benar-benar tercakup lengkap di satu tempat.
+        const semuaGuru = [...guruRes.data, ...waliKelasRes.data].sort((a, b) =>
+          a.nama.localeCompare(b.nama),
+        );
+        addSaldoSheet(
+          workbook,
+          "Guru",
+          "Data Guru",
+          semuaGuru,
+          "NPY",
+          (n) => n.username ?? "-",
+          true,
+        );
 
         const byKelas = new Map<string, Nasabah[]>();
         siswaRes.data.forEach((n) => {
@@ -596,13 +691,21 @@ export function NasabahPageContent() {
             addSaldoSheet(
               workbook,
               sheetName,
+              `Kelas ${kelas}`,
               byKelas.get(kelas)!.sort((a, b) => a.nama.localeCompare(b.nama)),
               "NIS",
-              "nis",
+              (n) => n.nis ?? "-",
             );
           });
       } else {
-        addSaldoSheet(workbook, "Umum", displayList, "NIS", "nis");
+        addSaldoSheet(
+          workbook,
+          "Umum",
+          "Nasabah Umum",
+          displayList,
+          "NIS",
+          (n) => n.nis ?? "-",
+        );
       }
 
       downloadWorkbook(workbook, `saldo-nasabah-${activeTab}-${Date.now()}.xlsx`);
