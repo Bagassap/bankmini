@@ -35,6 +35,7 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+import ExcelJS from "exceljs";
 import Layout from "@/components/Layout";
 import { AnimatedCurrency } from "@/components/dashboard/AnimatedCurrency";
 import api from "@/lib/api";
@@ -309,6 +310,50 @@ function ProgressRing({ percent }: { percent: number }) {
   );
 }
 
+const SHEET_NAME_STOPWORDS = new Set(["dan", "di", "ke", "yang", "untuk"]);
+
+// Excel sheet names are capped at 31 chars and can't contain \ / ? * [ ] : -
+// kelas names here routinely blow past that (e.g. "X Pengembangan Perangkat
+// Lunak dan Gim 3"), so abbreviate each word to its initial (keeping numbers
+// and grade-level roman numerals like "X"/"XI" intact) rather than blindly
+// cutting the string, which would make same-jurusan classes indistinguishable.
+function abbreviateKelasName(name: string): string {
+  const words = name.replace(/[\\/?*[\]:]/g, "").split(/\s+/).filter(Boolean);
+  const parts: string[] = [];
+  let buffer = "";
+  for (const word of words) {
+    if (SHEET_NAME_STOPWORDS.has(word.toLowerCase())) continue;
+    if (/^\d+$/.test(word) || /^(x|xi|xii|xiii)$/i.test(word)) {
+      if (buffer) {
+        parts.push(buffer);
+        buffer = "";
+      }
+      parts.push(word.toUpperCase());
+    } else {
+      buffer += word[0]?.toUpperCase() ?? "";
+    }
+  }
+  if (buffer) parts.push(buffer);
+  return parts.join(" ") || name;
+}
+
+function uniqueSheetName(rawName: string, used: Set<string>): string {
+  let base = rawName.replace(/[\\/?*[\]:]/g, "").trim();
+  if (base.length > 31) base = abbreviateKelasName(rawName);
+  if (base.length > 31) base = base.slice(0, 31);
+  if (!base) base = "Sheet";
+
+  let candidate = base;
+  let i = 1;
+  while (used.has(candidate)) {
+    const suffix = ` (${i})`;
+    candidate = base.slice(0, 31 - suffix.length) + suffix;
+    i++;
+  }
+  used.add(candidate);
+  return candidate;
+}
+
 export function NasabahPageContent() {
   const [activeTab, setActiveTab] = useState<Tab>("sekolah");
   const [nasabahList, setNasabahList] = useState<Nasabah[]>([]);
@@ -327,6 +372,7 @@ export function NasabahPageContent() {
   const [addForm, setAddForm] = useState<AddForm>(initialAddForm);
   const [addSaving, setAddSaving] = useState(false);
   const [page, setPage] = useState(1);
+  const [exporting, setExporting] = useState(false);
 
   async function loadNasabah() {
     setLoading(true);
@@ -466,30 +512,105 @@ export function NasabahPageContent() {
     setStatusFilter("");
   }
 
-  function exportCsv() {
-    const rows = [
-      ["No Rekening", "Nama", "Jenis", "Saldo", "Status", "Terdaftar"],
-      ...displayList.map((n) => [
-        n.noRekening,
-        n.nama,
-        jenisLabel[n.jenisNasabah],
-        String(n.saldo),
-        n.status,
-        n.createdAt,
-      ]),
+  function downloadWorkbook(workbook: ExcelJS.Workbook, filename: string) {
+    workbook.xlsx.writeBuffer().then((buffer) => {
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  function addSaldoSheet(
+    workbook: ExcelJS.Workbook,
+    sheetName: string,
+    rows: Nasabah[],
+    idLabel: "NIS" | "NIP",
+    idField: "nis" | "nip",
+  ) {
+    const sheet = workbook.addWorksheet(sheetName);
+    sheet.columns = [
+      { header: "No Rekening", key: "noRekening", width: 16 },
+      { header: "Nama", key: "nama", width: 32 },
+      { header: idLabel, key: "idNumber", width: 16 },
+      { header: "Saldo", key: "saldo", width: 18 },
+      { header: "Status", key: "status", width: 12 },
+      { header: "Terdaftar", key: "createdAt", width: 18 },
     ];
-    const csv = rows
-      .map((row) =>
-        row.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","),
-      )
-      .join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `nasabah-${activeTab}-${Date.now()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    sheet.getRow(1).font = { bold: true };
+    sheet.getRow(1).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFE5E7FF" },
+    };
+    rows.forEach((n) => {
+      sheet.addRow({
+        noRekening: n.noRekening,
+        nama: n.nama,
+        idNumber: n[idField] ?? "-",
+        saldo: Number(n.saldo),
+        status: n.status === "aktif" ? "Aktif" : "Nonaktif",
+        createdAt: formatDate(n.createdAt),
+      });
+    });
+    sheet.getColumn("saldo").numFmt = "#,##0";
+    const totalRow = sheet.addRow({
+      nama: "Total",
+      saldo: rows.reduce((sum, n) => sum + Number(n.saldo), 0),
+    });
+    totalRow.font = { bold: true };
+  }
+
+  async function exportSaldoExcel() {
+    setExporting(true);
+    try {
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = "Bank Mini NUSA";
+      workbook.created = new Date();
+
+      if (activeTab === "sekolah") {
+        const [guruRes, siswaRes] = await Promise.all([
+          api.get<Nasabah[]>("/nasabah", { params: { jenis: "guru" } }),
+          api.get<Nasabah[]>("/nasabah", { params: { jenis: "siswa" } }),
+        ]);
+
+        addSaldoSheet(workbook, "Guru", guruRes.data, "NIP", "nip");
+
+        const byKelas = new Map<string, Nasabah[]>();
+        siswaRes.data.forEach((n) => {
+          const kelas = n.kelas ?? "Tanpa Kelas";
+          if (!byKelas.has(kelas)) byKelas.set(kelas, []);
+          byKelas.get(kelas)!.push(n);
+        });
+
+        const usedSheetNames = new Set<string>(["Guru"]);
+        Array.from(byKelas.keys())
+          .sort((a, b) => a.localeCompare(b))
+          .forEach((kelas) => {
+            const sheetName = uniqueSheetName(kelas, usedSheetNames);
+            addSaldoSheet(
+              workbook,
+              sheetName,
+              byKelas.get(kelas)!.sort((a, b) => a.nama.localeCompare(b.nama)),
+              "NIS",
+              "nis",
+            );
+          });
+      } else {
+        addSaldoSheet(workbook, "Umum", displayList, "NIS", "nis");
+      }
+
+      downloadWorkbook(workbook, `saldo-nasabah-${activeTab}-${Date.now()}.xlsx`);
+    } catch (error) {
+      notify.error(getErrorMessage(error, "Gagal mengekspor data"));
+    } finally {
+      setExporting(false);
+    }
   }
 
   async function handleBulkDelete() {
@@ -779,11 +900,16 @@ export function NasabahPageContent() {
               type="button"
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.95 }}
-              onClick={exportCsv}
-              className="flex shrink-0 items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary-dark"
+              onClick={exportSaldoExcel}
+              disabled={exporting}
+              className="flex shrink-0 items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary-dark disabled:opacity-60"
             >
-              <Download size={14} />
-              Export
+              {exporting ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Download size={14} />
+              )}
+              {exporting ? "Mengekspor..." : "Export"}
             </motion.button>
           </div>
         </div>
