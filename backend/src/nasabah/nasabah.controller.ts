@@ -9,7 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { JenisNasabah, StatusNasabah } from '../generated/prisma/client';
+import { JenisNasabah, Role, StatusNasabah } from '../generated/prisma/client';
 import { NasabahService, SafeNasabah } from './nasabah.service';
 import { CreateNasabahDto } from './dto/create-nasabah.dto';
 import { UpdateNasabahDto } from './dto/update-nasabah.dto';
@@ -17,6 +17,8 @@ import { UpdateOwnProfileDto } from './dto/update-own-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { StaffOnlyGuard } from '../auth/staff-only.guard';
 import { NasabahOnlyGuard } from '../auth/nasabah-only.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { JwtPayload } from '../auth/jwt.strategy';
 
@@ -114,5 +116,23 @@ export class NasabahController {
   @UseGuards(StaffOnlyGuard)
   delete(@Param('id') id: string): Promise<SafeNasabah> {
     return this.nasabahService.delete(id);
+  }
+
+  @Get(':id/password')
+  @UseGuards(StaffOnlyGuard, RolesGuard)
+  @Roles(Role.superadmin)
+  async getPassword(
+    @Param('id') id: string,
+  ): Promise<{ password: string | null }> {
+    const password = await this.nasabahService.getDecryptedPassword(id);
+    return { password };
+  }
+
+  @Post(':id/reset-password')
+  @UseGuards(StaffOnlyGuard, RolesGuard)
+  @Roles(Role.superadmin)
+  async resetPassword(@Param('id') id: string): Promise<{ message: string }> {
+    await this.nasabahService.resetPassword(id);
+    return { message: 'Password berhasil direset ke default' };
   }
 }

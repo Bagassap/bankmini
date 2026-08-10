@@ -11,6 +11,7 @@ import * as bcrypt from 'bcrypt';
 import { JenisNasabah, Nasabah, Prisma, StatusNasabah } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { wibDateParts } from '../common/wib-date';
+import { PasswordVaultService } from '../common/password-vault.service';
 
 export interface CreateNasabahInput {
   nama: string;
@@ -54,7 +55,10 @@ export type SafeNasabah = Omit<Nasabah, 'password'>;
 
 @Injectable()
 export class NasabahService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly passwordVault: PasswordVaultService,
+  ) {}
 
   private excludePassword(nasabah: Nasabah): SafeNasabah {
     const { password, ...safeNasabah } = nasabah;
@@ -183,6 +187,9 @@ export class NasabahService {
         const hashedPassword = username
           ? await bcrypt.hash(noRekening, 10)
           : null;
+        const passwordPlainEncrypted = username
+          ? this.passwordVault.encrypt(noRekening)
+          : null;
         try {
           const nasabah = await this.prisma.nasabah.create({
             data: {
@@ -201,6 +208,8 @@ export class NasabahService {
               tanggalLahir: input.tanggalLahir,
               username,
               password: hashedPassword,
+              mustChangePassword: true,
+              passwordPlainEncrypted,
             },
           });
           return this.excludePassword(nasabah);
@@ -275,11 +284,55 @@ export class NasabahService {
       const hashed = await bcrypt.hash(newPassword, 10);
       await this.prisma.nasabah.update({
         where: { id },
-        data: { password: hashed },
+        data: {
+          password: hashed,
+          mustChangePassword: false,
+          passwordPlainEncrypted: this.passwordVault.encrypt(newPassword),
+        },
       });
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Gagal mengubah password');
+    }
+  }
+
+  async getDecryptedPassword(id: string): Promise<string | null> {
+    try {
+      const nasabah = await this.prisma.nasabah.findUnique({ where: { id } });
+      if (!nasabah) {
+        throw new NotFoundException('Akun tidak ditemukan');
+      }
+      if (!nasabah.passwordPlainEncrypted) return null;
+      return this.passwordVault.decrypt(nasabah.passwordPlainEncrypted);
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException('Gagal mengambil password');
+    }
+  }
+
+  async resetPassword(id: string): Promise<void> {
+    try {
+      const nasabah = await this.prisma.nasabah.findUnique({ where: { id } });
+      if (!nasabah) {
+        throw new NotFoundException('Akun tidak ditemukan');
+      }
+      if (!nasabah.username) {
+        throw new BadRequestException(
+          'Akun ini tidak memiliki login untuk direset',
+        );
+      }
+      const hashed = await bcrypt.hash(nasabah.username, 10);
+      await this.prisma.nasabah.update({
+        where: { id },
+        data: {
+          password: hashed,
+          mustChangePassword: true,
+          passwordPlainEncrypted: this.passwordVault.encrypt(nasabah.username),
+        },
+      });
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException('Gagal mereset password');
     }
   }
 

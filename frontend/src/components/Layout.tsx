@@ -14,6 +14,7 @@ import {
 } from "@/lib/role";
 import { useAuthStore } from "@/store/authStore";
 import { useUIStore } from "@/store/uiStore";
+import { ForcePasswordChangeScreen } from "./ForcePasswordChangeScreen";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 
@@ -40,6 +41,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user) return;
 
+    const isSuperadminOnlyRoute = pathname.startsWith("/admin/akun");
+
     if (isNasabahRole(user)) {
       const inPortal = pathname.startsWith("/portal");
       const staffRole = linkedStaffRole(user);
@@ -55,7 +58,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           );
           return;
         }
-        if (pathname.startsWith("/admin/akun") && staffRole !== "superadmin") {
+        if (isSuperadminOnlyRoute && staffRole !== "superadmin") {
           router.replace("/admin/dashboard");
           return;
         }
@@ -78,7 +81,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       router.replace("/admin/dashboard");
     } else if (isTellerTierRole(user) && (inAdminArea || pathname.startsWith("/portal"))) {
       router.replace("/dashboard");
-    } else if (pathname.startsWith("/admin/akun") && !isSuperadminRole(user)) {
+    } else if (isSuperadminOnlyRoute && !isSuperadminRole(user)) {
       router.replace("/admin/dashboard");
     }
   }, [user, pathname, router]);
@@ -93,6 +96,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   if (status === "unauthenticated") {
     return null;
+  }
+
+  if (isNasabahRole(user) && user?.mustChangePassword) {
+    return <ForcePasswordChangeScreen />;
   }
 
   return (

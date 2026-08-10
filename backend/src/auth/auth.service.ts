@@ -31,6 +31,7 @@ export interface LoginResult {
     role: string;
     noRekening?: string;
     linkedStaff?: LinkedStaffInfo;
+    mustChangePassword?: boolean;
   };
 }
 
@@ -123,6 +124,7 @@ export class AuthService {
           role: nasabah.jenisNasabah,
           noRekening: nasabah.noRekening,
           linkedStaff,
+          mustChangePassword: nasabah.mustChangePassword,
         });
       }
 

@@ -24,6 +24,7 @@ export interface User {
   accountType: AccountType;
   noRekening?: string;
   linkedStaff?: LinkedStaffInfo | null;
+  mustChangePassword?: boolean;
 }
 
 export interface Akun {
@@ -55,6 +56,7 @@ export interface Nasabah {
   saldo: string | number;
   status: StatusNasabah;
   username?: string | null;
+  mustChangePassword?: boolean;
   isActive: boolean;
   lastLogin?: string | null;
   createdAt: string;

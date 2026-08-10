@@ -4,6 +4,7 @@ import { AuthService, LoginResult } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { Public } from './public.decorator';
 import { CurrentUser } from './current-user.decorator';
+import { NasabahService } from '../nasabah/nasabah.service';
 import type { JwtPayload } from './jwt-payload.interface';
 
 const ACCESS_TOKEN_COOKIE = 'access_token';
@@ -29,7 +30,10 @@ function extractToken(req: Request): string | undefined {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly nasabahService: NasabahService,
+  ) {}
 
   @Public()
   @Post('login')
@@ -54,7 +58,13 @@ export class AuthController {
   }
 
   @Get('me')
-  me(@CurrentUser() user: JwtPayload): JwtPayload {
+  async me(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<JwtPayload & { mustChangePassword?: boolean }> {
+    if (user.accountType === 'nasabah') {
+      const nasabah = await this.nasabahService.findById(user.id);
+      return { ...user, mustChangePassword: nasabah.mustChangePassword };
+    }
     return user;
   }
 }

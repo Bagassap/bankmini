@@ -5,15 +5,23 @@ import { AnimatePresence, motion } from "framer-motion";
 import { notify } from "@/store/notifyStore";
 import {
   AlertTriangle,
+  BookUser,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
   Eye,
   EyeOff,
   Filter,
+  GraduationCap,
   KeyRound,
   Lock,
+  Loader2,
   Pencil,
+  RotateCcw,
+  School,
   Search,
-  Shield,
+  ShieldAlert,
   ShieldCheck,
   Sparkles,
   Trash2,
@@ -23,13 +31,16 @@ import {
   Users,
   X,
   XCircle,
+  type LucideIcon,
 } from "lucide-react";
 import Layout from "@/components/Layout";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
 import { formatDate } from "@/lib/format";
 import { useAuthStore } from "@/store/authStore";
-import type { Akun, Role } from "@/lib/types";
+import type { Akun, JenisNasabah, Nasabah, Role } from "@/lib/types";
+
+const LOGIN_JENIS: JenisNasabah[] = ["siswa", "guru", "wali_kelas"];
 
 interface AddForm {
   username: string;
@@ -63,6 +74,21 @@ function toEditForm(akun: Akun): EditForm {
   };
 }
 
+type RoleOrJenis = Role | JenisNasabah;
+
+interface UnifiedAccount {
+  id: string;
+  tipe: "staff" | "nasabah";
+  nama: string;
+  username: string;
+  roleOrJenis: RoleOrJenis;
+  isActive: boolean;
+  lastLogin?: string | null;
+  createdAt: string;
+  mustChangePassword?: boolean;
+  kelas?: string | null;
+}
+
 const ROLE_LABEL: Record<Role, string> = {
   superadmin: "Superadmin",
   admin: "Admin",
@@ -70,11 +96,27 @@ const ROLE_LABEL: Record<Role, string> = {
   co_teller: "Co Teller",
 };
 
-const ROLE_ICON: Record<Role, typeof Shield> = {
+const JENIS_LABEL: Record<JenisNasabah, string> = {
+  siswa: "Siswa",
+  guru: "Guru",
+  umum: "Umum",
+  kelas: "Kelas",
+  wali_kelas: "Wali Kelas",
+};
+
+const ROLE_ICON: Record<Role, LucideIcon> = {
   superadmin: ShieldCheck,
   admin: UserCog,
   teller: Users,
   co_teller: UserCheck,
+};
+
+const JENIS_ICON: Record<JenisNasabah, LucideIcon> = {
+  siswa: GraduationCap,
+  guru: BookUser,
+  umum: Users,
+  kelas: Users,
+  wali_kelas: ShieldCheck,
 };
 
 const ROLE_COLOR: Record<Role, string> = {
@@ -84,12 +126,29 @@ const ROLE_COLOR: Record<Role, string> = {
   co_teller: "#22c55e",
 };
 
-const ROLE_GRADIENT: Record<Role, string> = {
-  superadmin: "from-gradient-purple-from to-gradient-purple-to",
-  admin: "from-primary to-primary-dark",
-  teller: "from-gradient-orange-from to-gradient-orange-to",
-  co_teller: "from-gradient-green-from to-gradient-green-to",
+const JENIS_COLOR: Record<JenisNasabah, string> = {
+  siswa: "#0ea5e9",
+  guru: "#f59e0b",
+  umum: "#10b981",
+  kelas: "#8b5cf6",
+  wali_kelas: "#0d9488",
 };
+
+const COMBINED_LABEL: Record<RoleOrJenis, string> = { ...ROLE_LABEL, ...JENIS_LABEL };
+const COMBINED_ICON: Record<RoleOrJenis, LucideIcon> = { ...ROLE_ICON, ...JENIS_ICON };
+const COMBINED_COLOR: Record<RoleOrJenis, string> = { ...ROLE_COLOR, ...JENIS_COLOR };
+
+const FILTER_OPTIONS: RoleOrJenis[] = [
+  "superadmin",
+  "admin",
+  "teller",
+  "co_teller",
+  "siswa",
+  "guru",
+  "wali_kelas",
+];
+
+const PAGE_SIZE = 10;
 
 const inputClass =
   "w-full rounded-xl border border-border bg-background-hover px-3 py-2.5 text-sm text-text-primary transition-shadow focus:border-primary focus:bg-background-card focus:outline-none focus:ring-2 focus:ring-primary/20";
@@ -109,11 +168,14 @@ export function AkunPageContent() {
   const currentUser = useAuthStore((state) => state.user);
 
   const [akunList, setAkunList] = useState<Akun[]>([]);
+  const [nasabahList, setNasabahList] = useState<Nasabah[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState<Role | "">("");
+  const [roleFilter, setRoleFilter] = useState<RoleOrJenis | "">("");
+  const [kelasFilter, setKelasFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<"aktif" | "nonaktif" | "">("");
+  const [page, setPage] = useState(1);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState<AddForm>(initialAddForm);
@@ -125,11 +187,19 @@ export function AkunPageContent() {
   const [saving, setSaving] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
 
-  async function loadAkun() {
+  const [revealed, setRevealed] = useState<Record<string, string | null>>({});
+  const [revealing, setRevealing] = useState<Set<string>>(new Set());
+  const [resetting, setResetting] = useState<Set<string>>(new Set());
+
+  async function loadAll() {
     setLoading(true);
     try {
-      const { data } = await api.get<Akun[]>("/users");
-      setAkunList(data);
+      const [akunRes, nasabahRes] = await Promise.all([
+        api.get<Akun[]>("/users"),
+        api.get<Nasabah[]>("/nasabah"),
+      ]);
+      setAkunList(akunRes.data);
+      setNasabahList(nasabahRes.data.filter((n) => LOGIN_JENIS.includes(n.jenisNasabah)));
     } catch (error) {
       notify.error(getErrorMessage(error, "Gagal memuat data akun"));
     } finally {
@@ -138,29 +208,62 @@ export function AkunPageContent() {
   }
 
   useEffect(() => {
-    loadAkun();
+    loadAll();
   }, []);
 
-  const roleCounts = useMemo(() => {
-    return {
-      superadmin: akunList.filter((a) => a.role === "superadmin").length,
-      admin: akunList.filter((a) => a.role === "admin").length,
-      teller: akunList.filter((a) => a.role === "teller").length,
-      co_teller: akunList.filter((a) => a.role === "co_teller").length,
-    };
-  }, [akunList]);
+  const unifiedList: UnifiedAccount[] = useMemo(() => {
+    const staff: UnifiedAccount[] = akunList.map((a) => ({
+      id: a.id,
+      tipe: "staff",
+      nama: a.nama,
+      username: a.username,
+      roleOrJenis: a.role,
+      isActive: a.isActive,
+      lastLogin: a.lastLogin,
+      createdAt: a.createdAt,
+    }));
+    const nasabah: UnifiedAccount[] = nasabahList.map((n) => ({
+      id: n.id,
+      tipe: "nasabah",
+      nama: n.nama,
+      username: n.username ?? "-",
+      roleOrJenis: n.jenisNasabah,
+      isActive: n.isActive,
+      lastLogin: n.lastLogin,
+      createdAt: n.createdAt,
+      mustChangePassword: n.mustChangePassword,
+      kelas: n.kelas,
+    }));
+    return [...staff, ...nasabah];
+  }, [akunList, nasabahList]);
 
   const statusCounts = useMemo(() => {
     return {
-      aktif: akunList.filter((a) => a.isActive).length,
-      nonaktif: akunList.filter((a) => !a.isActive).length,
+      aktif: unifiedList.filter((a) => a.isActive).length,
+      nonaktif: unifiedList.filter((a) => !a.isActive).length,
     };
-  }, [akunList]);
+  }, [unifiedList]);
+
+  const passwordStats = useMemo(() => {
+    const sudahGanti = nasabahList.filter((n) => !n.mustChangePassword).length;
+    return { sudahGanti, masihDefault: nasabahList.length - sudahGanti };
+  }, [nasabahList]);
+
+  const kelasOptions = useMemo(() => {
+    const set = new Set<string>();
+    nasabahList.forEach((n) => {
+      if (n.jenisNasabah === "siswa" && n.kelas) set.add(n.kelas);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [nasabahList]);
 
   const displayList = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return akunList
-      .filter((a) => (roleFilter ? a.role === roleFilter : true))
+    return unifiedList
+      .filter((a) => (roleFilter ? a.roleOrJenis === roleFilter : true))
+      .filter((a) =>
+        roleFilter === "siswa" && kelasFilter ? a.kelas === kelasFilter : true,
+      )
       .filter((a) =>
         statusFilter
           ? statusFilter === "aktif"
@@ -174,10 +277,18 @@ export function AkunPageContent() {
             a.username.toLowerCase().includes(q)
           : true,
       );
-  }, [akunList, search, roleFilter, statusFilter]);
+  }, [unifiedList, search, roleFilter, kelasFilter, statusFilter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, roleFilter, kelasFilter, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(displayList.length / PAGE_SIZE));
+  const pagedList = displayList.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   function clearFilters() {
     setRoleFilter("");
+    setKelasFilter("");
     setStatusFilter("");
   }
 
@@ -214,7 +325,7 @@ export function AkunPageContent() {
       });
       notify.success("Akun berhasil ditambahkan");
       closeAdd();
-      loadAkun();
+      loadAll();
     } catch (error) {
       notify.error(getErrorMessage(error, "Gagal menambahkan akun"));
     } finally {
@@ -236,7 +347,7 @@ export function AkunPageContent() {
       });
       notify.success("Akun berhasil diperbarui");
       closeEdit();
-      loadAkun();
+      loadAll();
     } catch (error) {
       notify.error(getErrorMessage(error, "Gagal memperbarui akun"));
     } finally {
@@ -255,10 +366,71 @@ export function AkunPageContent() {
     try {
       await api.delete(`/users/${akun.id}`);
       notify.success("Akun berhasil dihapus");
-      loadAkun();
+      loadAll();
     } catch (error) {
       notify.error(getErrorMessage(error, "Gagal menghapus akun"));
     }
+  }
+
+  async function toggleReveal(id: string) {
+    if (revealed[id] !== undefined) {
+      setRevealed((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      return;
+    }
+    setRevealing((prev) => new Set(prev).add(id));
+    try {
+      const { data } = await api.get<{ password: string | null }>(
+        `/nasabah/${id}/password`,
+      );
+      setRevealed((prev) => ({ ...prev, [id]: data.password }));
+    } catch (error) {
+      notify.error(getErrorMessage(error, "Gagal mengambil password"));
+    } finally {
+      setRevealing((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  }
+
+  async function handleResetPassword(row: UnifiedAccount) {
+    if (
+      !confirm(
+        `Reset password ${row.nama} ke default (${row.username})? Nasabah akan wajib ganti password lagi saat login berikutnya.`,
+      )
+    ) {
+      return;
+    }
+    setResetting((prev) => new Set(prev).add(row.id));
+    try {
+      await api.post(`/nasabah/${row.id}/reset-password`);
+      notify.success(`Password ${row.nama} berhasil direset ke default`);
+      setRevealed((prev) => {
+        const next = { ...prev };
+        delete next[row.id];
+        return next;
+      });
+      loadAll();
+    } catch (error) {
+      notify.error(getErrorMessage(error, "Gagal mereset password"));
+    } finally {
+      setResetting((prev) => {
+        const next = new Set(prev);
+        next.delete(row.id);
+        return next;
+      });
+    }
+  }
+
+  function copyToClipboard(value: string) {
+    navigator.clipboard.writeText(value).then(() => {
+      notify.success("Password disalin ke clipboard");
+    });
   }
 
   const isEditingSelf = editing?.id === currentUser?.id;
@@ -303,7 +475,7 @@ export function AkunPageContent() {
               </h1>
               <p className="mt-1 flex items-center gap-1.5 text-sm text-text-secondary">
                 <ShieldCheck size={13} className="text-text-muted" />
-                Kelola akun staf: superadmin, admin, teller, dan co teller
+                Kelola seluruh akun: staf (superadmin/admin/teller/co teller) dan nasabah (siswa/guru/wali kelas)
               </p>
             </div>
           </div>
@@ -315,7 +487,7 @@ export function AkunPageContent() {
               </span>
               <span className="text-left leading-tight">
                 <span className="block text-xs font-bold text-primary">
-                  {akunList.length} Akun
+                  {unifiedList.length} Akun
                 </span>
                 <span className="block text-[10px] text-primary/70">Terdaftar</span>
               </span>
@@ -328,7 +500,7 @@ export function AkunPageContent() {
               className="flex w-fit items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary-dark"
             >
               <UserPlus size={16} />
-              Tambah Akun
+              Tambah Akun Staf
             </motion.button>
           </div>
         </div>
@@ -347,55 +519,38 @@ export function AkunPageContent() {
           [
             {
               label: "Total Akun",
-              value: akunList.length,
-              caption: "Seluruh staf terdaftar",
-              progressPct: 100,
+              value: unifiedList.length,
+              caption: "Staf & nasabah",
               icon: Users,
               gradient: "from-primary to-primary-dark",
             },
             {
-              label: "Superadmin",
-              value: roleCounts.superadmin,
-              caption: "Akses penuh sistem",
-              progressPct:
-                akunList.length > 0
-                  ? Math.round((roleCounts.superadmin / akunList.length) * 100)
-                  : 0,
+              label: "Akun Staf",
+              value: akunList.length,
+              caption: "Superadmin, admin, teller, co teller",
               icon: ShieldCheck,
-              gradient: ROLE_GRADIENT.superadmin,
-            },
-            {
-              label: "Admin",
-              value: roleCounts.admin,
-              caption: "Kelola nasabah & laporan",
-              progressPct:
-                akunList.length > 0
-                  ? Math.round((roleCounts.admin / akunList.length) * 100)
-                  : 0,
-              icon: UserCog,
               gradient: "from-gradient-blue-from to-gradient-blue-to",
             },
             {
-              label: "Teller",
-              value: roleCounts.teller,
-              caption: "Input transaksi harian",
-              progressPct:
-                akunList.length > 0
-                  ? Math.round((roleCounts.teller / akunList.length) * 100)
-                  : 0,
-              icon: Users,
-              gradient: ROLE_GRADIENT.teller,
+              label: "Akun Nasabah",
+              value: nasabahList.length,
+              caption: "Siswa, guru, wali kelas",
+              icon: GraduationCap,
+              gradient: "from-gradient-purple-from to-gradient-purple-to",
             },
             {
-              label: "Co Teller",
-              value: roleCounts.co_teller,
-              caption: "Bantu transaksi teller",
-              progressPct:
-                akunList.length > 0
-                  ? Math.round((roleCounts.co_teller / akunList.length) * 100)
-                  : 0,
-              icon: UserCheck,
-              gradient: ROLE_GRADIENT.co_teller,
+              label: "Sudah Ganti Password",
+              value: passwordStats.sudahGanti,
+              caption: "Nasabah, dari default NIS/NPY",
+              icon: CheckCircle2,
+              gradient: "from-gradient-green-from to-gradient-green-to",
+            },
+            {
+              label: "Masih Password Default",
+              value: passwordStats.masihDefault,
+              caption: "Nasabah, belum pernah ganti",
+              icon: ShieldAlert,
+              gradient: "from-gradient-orange-from to-gradient-orange-to",
             },
           ] as const
         ).map((stat) => (
@@ -429,18 +584,6 @@ export function AkunPageContent() {
                 </div>
               </div>
               <p className="mt-2 truncate text-[10px] text-white/60">{stat.caption}</p>
-              <div className="mt-2.5">
-                <div className="mb-1 flex items-center justify-between text-[9px] text-white/70">
-                  <span>Porsi staf</span>
-                  <span className="font-bold text-white">{stat.progressPct}%</span>
-                </div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/20">
-                  <div
-                    className="h-full rounded-full bg-white transition-[width] duration-700"
-                    style={{ width: `${Math.min(100, Math.max(0, stat.progressPct))}%` }}
-                  />
-                </div>
-              </div>
             </div>
           </motion.div>
         ))}
@@ -469,7 +612,7 @@ export function AkunPageContent() {
               </span>
             </p>
             <p className="mt-1 ml-9 text-xs text-text-secondary">
-              Kelola, saring, dan cari akun staf dengan cepat
+              Kelola, saring, dan cari akun staf maupun nasabah dengan cepat
             </p>
           </div>
           <div className="relative w-full sm:max-w-xs">
@@ -498,24 +641,46 @@ export function AkunPageContent() {
 
         <div className="relative mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
           <div className="flex flex-wrap items-center gap-1.5">
-            {(
-              [
-                { value: "" as const, label: "Semua Role", icon: Filter },
-                { value: "superadmin" as const, label: "Superadmin", icon: ShieldCheck },
-                { value: "admin" as const, label: "Admin", icon: UserCog },
-                { value: "teller" as const, label: "Teller", icon: Users },
-                { value: "co_teller" as const, label: "Co Teller", icon: UserCheck },
-              ]
-            ).map((opt) => {
-              const active = roleFilter === opt.value;
-              const color = opt.value ? ROLE_COLOR[opt.value] : "#1120f0";
-              const OptIcon = opt.icon;
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                setRoleFilter("");
+                setKelasFilter("");
+              }}
+              className="relative rounded-md px-3.5 py-1.5 text-xs font-semibold"
+            >
+              {roleFilter === "" && (
+                <motion.span
+                  layoutId="role-pill-active"
+                  transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                  className="absolute inset-0 rounded-md bg-primary shadow-sm"
+                />
+              )}
+              <span
+                className={`relative flex items-center gap-1.5 transition-colors ${
+                  roleFilter === ""
+                    ? "text-white"
+                    : "text-text-secondary hover:text-text-primary"
+                }`}
+              >
+                <Filter size={12} />
+                Semua
+              </span>
+            </motion.button>
+            {FILTER_OPTIONS.map((opt) => {
+              const active = roleFilter === opt;
+              const color = COMBINED_COLOR[opt];
+              const OptIcon = COMBINED_ICON[opt];
               return (
                 <motion.button
-                  key={opt.label}
+                  key={opt}
                   type="button"
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => setRoleFilter(opt.value)}
+                  onClick={() => {
+                    setRoleFilter(opt);
+                    if (opt !== "siswa") setKelasFilter("");
+                  }}
                   className="relative rounded-md px-3.5 py-1.5 text-xs font-semibold"
                 >
                   {active && (
@@ -534,7 +699,7 @@ export function AkunPageContent() {
                     }`}
                   >
                     <OptIcon size={12} />
-                    {opt.label}
+                    {COMBINED_LABEL[opt]}
                   </span>
                 </motion.button>
               );
@@ -547,7 +712,7 @@ export function AkunPageContent() {
                   value: "" as const,
                   label: "Semua Status",
                   icon: Filter,
-                  count: akunList.length,
+                  count: unifiedList.length,
                 },
                 {
                   value: "aktif" as const,
@@ -603,16 +768,68 @@ export function AkunPageContent() {
           </div>
         </div>
 
-        {(roleFilter || statusFilter) && (
+        {(roleFilter || statusFilter || kelasFilter) && (
           <div className="relative mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+            {roleFilter === "siswa" && kelasOptions.length > 0 && (
+              <>
+                <span className="flex items-center gap-1 text-[11px] font-semibold text-text-muted">
+                  <School size={11} />
+                  Kelas:
+                </span>
+                <div className="relative">
+                  <School
+                    size={13}
+                    className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-text-muted"
+                  />
+                  <select
+                    value={kelasFilter}
+                    onChange={(e) => setKelasFilter(e.target.value)}
+                    className="appearance-none rounded-xl border border-transparent bg-background-hover py-2 pr-8 pl-8 text-xs font-semibold text-text-secondary transition-shadow focus:border-primary focus:bg-background-card focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  >
+                    <option value="">Semua Kelas ({kelasOptions.length})</option>
+                    {kelasOptions.map((k) => (
+                      <option key={k} value={k}>
+                        {k}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {kelasFilter && (
+                  <span className="text-[11px] font-medium text-text-muted">
+                    {
+                      nasabahList.filter(
+                        (n) => n.jenisNasabah === "siswa" && n.kelas === kelasFilter,
+                      ).length
+                    }{" "}
+                    siswa di kelas ini
+                  </span>
+                )}
+                <span className="h-4 w-px shrink-0 bg-border" />
+              </>
+            )}
             <span className="flex items-center gap-1 text-[11px] font-semibold text-text-muted">
               <Sparkles size={11} />
               Filter aktif:
             </span>
             {roleFilter && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                {ROLE_LABEL[roleFilter]}
-                <button type="button" onClick={() => setRoleFilter("")}>
+                {COMBINED_LABEL[roleFilter]}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRoleFilter("");
+                    setKelasFilter("");
+                  }}
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+            {kelasFilter && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                <School size={12} />
+                {kelasFilter}
+                <button type="button" onClick={() => setKelasFilter("")}>
                   <X size={12} />
                 </button>
               </span>
@@ -655,7 +872,7 @@ export function AkunPageContent() {
                   Nama &amp; Username
                 </th>
                 <th className="px-4 py-3 text-xs font-bold tracking-wide text-text-muted uppercase">
-                  Role
+                  Tipe / Role
                 </th>
                 <th className="px-4 py-3 text-xs font-bold tracking-wide text-text-muted uppercase">
                   Status
@@ -676,12 +893,12 @@ export function AkunPageContent() {
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center gap-2 text-text-secondary">
-                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      <Loader2 size={22} className="animate-spin text-primary" />
                       Memuat data akun...
                     </div>
                   </td>
                 </tr>
-              ) : displayList.length === 0 ? (
+              ) : pagedList.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center gap-2 text-text-secondary">
@@ -691,12 +908,16 @@ export function AkunPageContent() {
                   </td>
                 </tr>
               ) : (
-                displayList.map((akun) => {
-                  const RoleIcon = ROLE_ICON[akun.role];
-                  const isSelf = akun.id === currentUser?.id;
+                pagedList.map((row) => {
+                  const RoleIcon = COMBINED_ICON[row.roleOrJenis];
+                  const color = COMBINED_COLOR[row.roleOrJenis];
+                  const isSelf = row.tipe === "staff" && row.id === currentUser?.id;
+                  const isRevealing = revealing.has(row.id);
+                  const isResetting = resetting.has(row.id);
+                  const revealedValue = revealed[row.id];
                   return (
                     <motion.tr
-                      key={akun.id}
+                      key={`${row.tipe}-${row.id}`}
                       variants={rowVariants}
                       className="border-b border-border transition-colors last:border-0 hover:bg-background-hover"
                     >
@@ -704,13 +925,13 @@ export function AkunPageContent() {
                         <div className="flex items-center gap-2.5">
                           <span
                             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                            style={{ backgroundColor: ROLE_COLOR[akun.role] }}
+                            style={{ backgroundColor: color }}
                           >
-                            {akun.nama.slice(0, 2).toUpperCase()}
+                            {row.nama.slice(0, 2).toUpperCase()}
                           </span>
                           <div className="min-w-0">
                             <p className="flex items-center gap-1.5 font-medium text-text-primary">
-                              {akun.nama}
+                              {row.nama}
                               {isSelf && (
                                 <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
                                   Anda
@@ -718,65 +939,141 @@ export function AkunPageContent() {
                               )}
                             </p>
                             <p className="font-mono text-xs text-text-muted">
-                              {akun.username}
+                              {row.username}
                             </p>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span
-                          className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-white"
-                          style={{ backgroundColor: ROLE_COLOR[akun.role] }}
-                        >
-                          <RoleIcon size={12} />
-                          {ROLE_LABEL[akun.role]}
-                        </span>
+                        <div className="flex flex-row flex-nowrap items-center gap-1.5 whitespace-nowrap">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                              row.tipe === "staff"
+                                ? "bg-primary/10 text-primary"
+                                : "bg-gradient-purple-from/15 text-gradient-purple-to"
+                            }`}
+                          >
+                            {row.tipe === "staff" ? "Staff" : "Nasabah"}
+                          </span>
+                          <span
+                            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-white"
+                            style={{ backgroundColor: color }}
+                          >
+                            <RoleIcon size={12} />
+                            {COMBINED_LABEL[row.roleOrJenis]}
+                          </span>
+                          {row.tipe === "nasabah" &&
+                            (row.mustChangePassword ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium text-warning">
+                                <ShieldAlert size={10} />
+                                Password Default
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-medium text-success">
+                                <CheckCircle2 size={10} />
+                                Sudah Ganti
+                              </span>
+                            ))}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <span
                           className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
-                            akun.isActive
+                            row.isActive
                               ? "bg-success/15 text-success"
                               : "bg-background-hover text-text-secondary"
                           }`}
                         >
-                          {akun.isActive ? (
+                          {row.isActive ? (
                             <CheckCircle2 size={12} />
                           ) : (
                             <XCircle size={12} />
                           )}
-                          {akun.isActive ? "Aktif" : "Nonaktif"}
+                          {row.isActive ? "Aktif" : "Nonaktif"}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-xs text-text-secondary">
-                        {akun.lastLogin ? formatDate(akun.lastLogin) : "Belum pernah"}
+                        {row.lastLogin ? formatDate(row.lastLogin) : "Belum pernah"}
                       </td>
                       <td className="px-4 py-3 text-xs text-text-secondary">
-                        {formatDate(akun.createdAt)}
+                        {formatDate(row.createdAt)}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex gap-2">
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.92 }}
-                            onClick={() => openEdit(akun)}
-                            className="flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-primary-dark"
-                          >
-                            <Pencil size={12} />
-                            Edit
-                          </motion.button>
-                          <motion.button
-                            whileHover={isSelf ? undefined : { scale: 1.05 }}
-                            whileTap={isSelf ? undefined : { scale: 0.92 }}
-                            onClick={() => handleDelete(akun)}
-                            disabled={isSelf}
-                            title={isSelf ? "Tidak dapat menghapus akun sendiri" : undefined}
-                            className="flex items-center gap-1 rounded-lg bg-danger px-2.5 py-1.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-danger/90 disabled:cursor-not-allowed disabled:opacity-40"
-                          >
-                            <Trash2 size={12} />
-                            Hapus
-                          </motion.button>
-                        </div>
+                        {row.tipe === "staff" ? (
+                          <div className="flex gap-2">
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.92 }}
+                              onClick={() => {
+                                const akun = akunList.find((a) => a.id === row.id);
+                                if (akun) openEdit(akun);
+                              }}
+                              className="flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-primary-dark"
+                            >
+                              <Pencil size={12} />
+                              Edit
+                            </motion.button>
+                            <motion.button
+                              whileHover={isSelf ? undefined : { scale: 1.05 }}
+                              whileTap={isSelf ? undefined : { scale: 0.92 }}
+                              onClick={() => {
+                                const akun = akunList.find((a) => a.id === row.id);
+                                if (akun) handleDelete(akun);
+                              }}
+                              disabled={isSelf}
+                              title={isSelf ? "Tidak dapat menghapus akun sendiri" : undefined}
+                              className="flex items-center gap-1 rounded-lg bg-danger px-2.5 py-1.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-danger/90 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              <Trash2 size={12} />
+                              Hapus
+                            </motion.button>
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => toggleReveal(row.id)}
+                              disabled={isRevealing}
+                              className="flex items-center gap-1 rounded-lg bg-primary/10 px-2.5 py-1.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+                            >
+                              {isRevealing ? (
+                                <Loader2 size={12} className="animate-spin" />
+                              ) : revealedValue !== undefined ? (
+                                <EyeOff size={12} />
+                              ) : (
+                                <Eye size={12} />
+                              )}
+                              {revealedValue !== undefined ? "Sembunyikan" : "Lihat"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleResetPassword(row)}
+                              disabled={isResetting}
+                              className="flex items-center gap-1 rounded-lg bg-warning/10 px-2.5 py-1.5 text-xs font-bold text-warning transition-colors hover:bg-warning/20 disabled:opacity-50"
+                            >
+                              {isResetting ? (
+                                <Loader2 size={12} className="animate-spin" />
+                              ) : (
+                                <RotateCcw size={12} />
+                              )}
+                              Reset
+                            </button>
+                            {revealedValue !== undefined && (
+                              <span className="flex items-center gap-1.5 rounded-lg bg-background-hover px-2.5 py-1.5 font-mono text-xs text-text-primary">
+                                {revealedValue ?? "Belum tersedia"}
+                                {revealedValue && (
+                                  <button
+                                    type="button"
+                                    onClick={() => copyToClipboard(revealedValue)}
+                                    className="text-text-muted transition-colors hover:text-primary"
+                                  >
+                                    <Copy size={12} />
+                                  </button>
+                                )}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </td>
                     </motion.tr>
                   );
@@ -785,6 +1082,36 @@ export function AkunPageContent() {
             </motion.tbody>
           </table>
         </div>
+
+        {displayList.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3">
+            <span className="text-xs font-semibold text-text-muted">
+              Menampilkan {(page - 1) * PAGE_SIZE + 1}-
+              {Math.min(page * PAGE_SIZE, displayList.length)} dari {displayList.length} akun
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-text-muted">
+                Halaman {page} dari {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-background-hover text-text-secondary transition-colors hover:bg-border disabled:opacity-40"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-background-hover text-text-secondary transition-colors hover:bg-border disabled:opacity-40"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
       </motion.div>
 
       <AnimatePresence>
@@ -820,10 +1147,10 @@ export function AkunPageContent() {
                   </span>
                   <div>
                     <h2 className="text-lg font-bold text-text-primary">
-                      Tambah Akun
+                      Tambah Akun Staf
                     </h2>
                     <p className="text-xs text-text-secondary">
-                      Buat akun staf baru
+                      Buat akun staf baru (superadmin/admin/teller/co teller)
                     </p>
                   </div>
                 </div>
@@ -838,7 +1165,7 @@ export function AkunPageContent() {
 
               <p className="relative mb-4 flex items-center gap-1.5 rounded-xl bg-primary/5 px-3 py-2 text-xs text-text-secondary">
                 <Sparkles size={13} className="shrink-0 text-primary" />
-                Tentukan role sesuai tanggung jawab akun ini.
+                Untuk akun nasabah (siswa/guru/wali kelas), tambahkan lewat menu Nasabah.
               </p>
 
               <form onSubmit={handleAddSubmit} className="relative flex flex-col gap-4">
