@@ -372,7 +372,7 @@ export class NasabahService {
         }),
         this.prisma.nasabah.findMany({
           where: { jenisNasabah: 'siswa', kelas: waliKelas.kelas },
-          orderBy: { nama: 'asc' },
+          orderBy: { nis: 'asc' },
         }),
       ]);
 

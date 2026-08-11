@@ -398,6 +398,123 @@ export async function downloadSimpananPdf(
   doc.save(filename);
 }
 
+export interface NasabahSaldoPdfRow {
+  nama: string;
+  idValue: string;
+  saldo: number;
+  status: string;
+}
+
+export interface NasabahSaldoPdfSection {
+  heading: string;
+  idLabel: string;
+  rows: NasabahSaldoPdfRow[];
+}
+
+export interface NasabahSaldoPdfInput {
+  dicetakLabel: string;
+  sections: NasabahSaldoPdfSection[];
+}
+
+export async function downloadNasabahSaldoPdf(
+  input: NasabahSaldoPdfInput,
+  filename: string,
+): Promise<void> {
+  const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+  await registerSatoshiFont(doc);
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const marginX = MARGIN_2CM;
+
+  function drawPageFooter(pageNumber: number, pageCount: number) {
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...COLOR_MUTED);
+    doc.text(`Bank Mini NUSA – Dicetak: ${input.dicetakLabel}`, marginX, pageHeight - 28);
+    doc.text(`Halaman ${pageNumber} dari ${pageCount}`, pageWidth - marginX, pageHeight - 28, {
+      align: "right",
+    });
+  }
+
+  function drawSectionHeader(heading: string) {
+    doc.setFont(FONT, "bold");
+    doc.setTextColor(...COLOR_INK);
+    doc.setFontSize(14);
+    doc.text("DAFTAR SALDO NASABAH", pageWidth / 2, marginX, { align: "center" });
+    doc.setFontSize(12);
+    doc.setTextColor(...COLOR_PRIMARY);
+    doc.text(NAMA_BANK, pageWidth / 2, marginX + 19, { align: "center" });
+    doc.setTextColor(...COLOR_INK);
+    doc.text(NAMA_SEKOLAH, pageWidth / 2, marginX + 37, { align: "center" });
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(10.5);
+    doc.setTextColor(...COLOR_MUTED);
+    doc.text(heading, pageWidth / 2, marginX + 54, { align: "center" });
+
+    doc.setDrawColor(...COLOR_PRIMARY);
+    doc.setLineWidth(1.25);
+    doc.line(marginX, marginX + 66, pageWidth - marginX, marginX + 66);
+  }
+
+  input.sections.forEach((section, index) => {
+    if (index > 0) doc.addPage();
+    drawSectionHeader(section.heading);
+
+    const body =
+      section.rows.length > 0
+        ? section.rows.map((r, i) => [
+            String(i + 1),
+            sanitizeForPdf(r.nama),
+            r.idValue,
+            formatRupiah(r.saldo),
+            r.status,
+          ])
+        : [["-", "Belum ada data", "-", "-", "-"]];
+
+    autoTable(doc, {
+      startY: marginX + 82,
+      head: [["NO", "NAMA", section.idLabel, "SALDO (RP)", "STATUS"]],
+      body,
+      theme: "grid",
+      styles: {
+        font: FONT,
+        fontSize: 9,
+        cellPadding: 6,
+        valign: "middle",
+        lineColor: COLOR_BORDER_DARK,
+        lineWidth: 0.75,
+        textColor: COLOR_INK,
+      },
+      headStyles: {
+        fillColor: COLOR_PRIMARY,
+        textColor: 255,
+        fontStyle: "bold",
+        halign: "center",
+        lineColor: COLOR_BORDER_DARK,
+        lineWidth: 0.75,
+      },
+      bodyStyles: { halign: "left" },
+      alternateRowStyles: { fillColor: COLOR_PRIMARY_LIGHT },
+      columnStyles: {
+        0: { cellWidth: 30, halign: "center" },
+        1: { cellWidth: 190 },
+        2: { cellWidth: 90, halign: "center" },
+        3: { cellWidth: 100, halign: "right" },
+        4: { cellWidth: 70, halign: "center" },
+      },
+      margin: { left: marginX, right: marginX },
+    });
+  });
+
+  const pageCount = doc.getNumberOfPages();
+  for (let pageNumber = 1; pageNumber <= pageCount; pageNumber++) {
+    doc.setPage(pageNumber);
+    drawPageFooter(pageNumber, pageCount);
+  }
+
+  doc.save(filename);
+}
+
 export interface PiutangPdfRow {
   noLabel: string;
   nama: string;

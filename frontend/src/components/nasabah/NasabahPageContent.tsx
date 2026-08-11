@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Download,
   Eye,
+  FileText,
   Filter,
   GraduationCap,
   Hash,
@@ -37,6 +38,7 @@ import {
 } from "lucide-react";
 import ExcelJS from "exceljs";
 import Layout from "@/components/Layout";
+import { downloadNasabahSaldoPdf, type NasabahSaldoPdfSection } from "@/lib/exportPdf";
 import { AnimatedCurrency } from "@/components/dashboard/AnimatedCurrency";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
@@ -373,6 +375,7 @@ export function NasabahPageContent() {
   const [addSaving, setAddSaving] = useState(false);
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   async function loadNasabah() {
     setLoading(true);
@@ -441,15 +444,18 @@ export function NasabahPageContent() {
       .filter((n) =>
         jenisFilter === "siswa" && kelasFilter ? n.kelas === kelasFilter : true,
       );
-    const sorted = [...filtered].sort((a, b) => {
+    if (jenisFilter === "siswa") {
+      return [...filtered].sort((a, b) => {
+        const kelasCompare = (a.kelas ?? "").localeCompare(b.kelas ?? "");
+        if (kelasCompare !== 0) return kelasCompare;
+        return (a.nis ?? "").localeCompare(b.nis ?? "", undefined, { numeric: true });
+      });
+    }
+    return [...filtered].sort((a, b) => {
       if (sortBy === "nama") return a.nama.localeCompare(b.nama);
       if (sortBy === "saldo") return Number(b.saldo) - Number(a.saldo);
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-    if (jenisFilter === "siswa") {
-      return sorted.sort((a, b) => (a.kelas ?? "").localeCompare(b.kelas ?? ""));
-    }
-    return sorted;
   }, [nasabahList, statusFilter, sortBy, jenisFilter, kelasFilter]);
 
   const totalPages = Math.max(1, Math.ceil(displayList.length / PAGE_SIZE));
@@ -631,19 +637,41 @@ export function NasabahPageContent() {
         }
       });
     });
+  }
 
-    const totalRow = sheet.addRow({
-      nama: `Total (${rows.length} nasabah)`,
-      saldo: rows.reduce((sum, n) => sum + Number(n.saldo), 0),
+  async function fetchSekolahSaldoData() {
+    const [guruRes, waliKelasRes, siswaRes] = await Promise.all([
+      api.get<Nasabah[]>("/nasabah", { params: { jenis: "guru" } }),
+      api.get<Nasabah[]>("/nasabah", { params: { jenis: "wali_kelas" } }),
+      api.get<Nasabah[]>("/nasabah", { params: { jenis: "siswa" } }),
+    ]);
+
+    // Wali kelas adalah guru juga (cuma beda tanggung jawab) - gabung ke
+    // satu grup "Guru" yang sama, bukan dipisah, supaya semua nasabah
+    // guru benar-benar tercakup lengkap di satu tempat.
+    const semuaGuru = [...guruRes.data, ...waliKelasRes.data].sort((a, b) =>
+      a.nama.localeCompare(b.nama),
+    );
+
+    const byKelas = new Map<string, Nasabah[]>();
+    siswaRes.data.forEach((n) => {
+      const kelas = n.kelas ?? "Tanpa Kelas";
+      if (!byKelas.has(kelas)) byKelas.set(kelas, []);
+      byKelas.get(kelas)!.push(n);
     });
-    totalRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: PRIMARY } };
-      if (colNumber === 4) {
-        cell.numFmt = "#,##0";
-        cell.alignment = { horizontal: "right" };
-      }
-    });
+
+    const kelasEntries = Array.from(byKelas.keys())
+      .sort((a, b) => a.localeCompare(b))
+      .map((kelas) => ({
+        kelas,
+        siswa: byKelas
+          .get(kelas)!
+          .sort((a, b) =>
+            (a.nis ?? "").localeCompare(b.nis ?? "", undefined, { numeric: true }),
+          ),
+      }));
+
+    return { semuaGuru, kelasEntries };
   }
 
   async function exportSaldoExcel() {
@@ -654,18 +682,8 @@ export function NasabahPageContent() {
       workbook.created = new Date();
 
       if (activeTab === "sekolah") {
-        const [guruRes, waliKelasRes, siswaRes] = await Promise.all([
-          api.get<Nasabah[]>("/nasabah", { params: { jenis: "guru" } }),
-          api.get<Nasabah[]>("/nasabah", { params: { jenis: "wali_kelas" } }),
-          api.get<Nasabah[]>("/nasabah", { params: { jenis: "siswa" } }),
-        ]);
+        const { semuaGuru, kelasEntries } = await fetchSekolahSaldoData();
 
-        // Wali kelas adalah guru juga (cuma beda tanggung jawab) - gabung ke
-        // satu sheet "Guru" yang sama, bukan dipisah, supaya semua nasabah
-        // guru benar-benar tercakup lengkap di satu tempat.
-        const semuaGuru = [...guruRes.data, ...waliKelasRes.data].sort((a, b) =>
-          a.nama.localeCompare(b.nama),
-        );
         addSaldoSheet(
           workbook,
           "Guru",
@@ -676,27 +694,11 @@ export function NasabahPageContent() {
           true,
         );
 
-        const byKelas = new Map<string, Nasabah[]>();
-        siswaRes.data.forEach((n) => {
-          const kelas = n.kelas ?? "Tanpa Kelas";
-          if (!byKelas.has(kelas)) byKelas.set(kelas, []);
-          byKelas.get(kelas)!.push(n);
-        });
-
         const usedSheetNames = new Set<string>(["Guru"]);
-        Array.from(byKelas.keys())
-          .sort((a, b) => a.localeCompare(b))
-          .forEach((kelas) => {
-            const sheetName = uniqueSheetName(kelas, usedSheetNames);
-            addSaldoSheet(
-              workbook,
-              sheetName,
-              `Kelas ${kelas}`,
-              byKelas.get(kelas)!.sort((a, b) => a.nama.localeCompare(b.nama)),
-              "NIS",
-              (n) => n.nis ?? "-",
-            );
-          });
+        kelasEntries.forEach(({ kelas, siswa }) => {
+          const sheetName = uniqueSheetName(kelas, usedSheetNames);
+          addSaldoSheet(workbook, sheetName, `Kelas ${kelas}`, siswa, "NIS", (n) => n.nis ?? "-");
+        });
       } else {
         addSaldoSheet(
           workbook,
@@ -713,6 +715,58 @@ export function NasabahPageContent() {
       notify.error(getErrorMessage(error, "Gagal mengekspor data"));
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function exportSaldoPdf() {
+    setExportingPdf(true);
+    try {
+      const dicetakLabel = new Intl.DateTimeFormat("id-ID", {
+        dateStyle: "long",
+        timeStyle: "short",
+      }).format(new Date());
+
+      const toRows = (list: Nasabah[], idValue: (n: Nasabah) => string) =>
+        list.map((n) => ({
+          nama: n.nama,
+          idValue: idValue(n),
+          saldo: Number(n.saldo),
+          status: n.status === "aktif" ? "Aktif" : "Nonaktif",
+        }));
+
+      const sections: NasabahSaldoPdfSection[] = [];
+
+      if (activeTab === "sekolah") {
+        const { semuaGuru, kelasEntries } = await fetchSekolahSaldoData();
+
+        sections.push({
+          heading: "Data Guru",
+          idLabel: "NPY",
+          rows: toRows(semuaGuru, (n) => n.username ?? "-"),
+        });
+        kelasEntries.forEach(({ kelas, siswa }) => {
+          sections.push({
+            heading: `Kelas ${kelas}`,
+            idLabel: "NIS",
+            rows: toRows(siswa, (n) => n.nis ?? "-"),
+          });
+        });
+      } else {
+        sections.push({
+          heading: "Nasabah Umum",
+          idLabel: "NIS",
+          rows: toRows(displayList, (n) => n.nis ?? "-"),
+        });
+      }
+
+      await downloadNasabahSaldoPdf(
+        { dicetakLabel, sections },
+        `saldo-nasabah-${activeTab}-${Date.now()}.pdf`,
+      );
+    } catch (error) {
+      notify.error(getErrorMessage(error, "Gagal mengekspor PDF"));
+    } finally {
+      setExportingPdf(false);
     }
   }
 
@@ -1004,7 +1058,7 @@ export function NasabahPageContent() {
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.95 }}
               onClick={exportSaldoExcel}
-              disabled={exporting}
+              disabled={exporting || exportingPdf}
               className="flex shrink-0 items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary-dark disabled:opacity-60"
             >
               {exporting ? (
@@ -1012,7 +1066,22 @@ export function NasabahPageContent() {
               ) : (
                 <Download size={14} />
               )}
-              {exporting ? "Mengekspor..." : "Export"}
+              {exporting ? "Mengekspor..." : "Excel"}
+            </motion.button>
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={exportSaldoPdf}
+              disabled={exporting || exportingPdf}
+              className="flex shrink-0 items-center gap-1.5 rounded-xl bg-danger px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-danger/90 disabled:opacity-60"
+            >
+              {exportingPdf ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <FileText size={14} />
+              )}
+              {exportingPdf ? "Mengekspor..." : "PDF"}
             </motion.button>
           </div>
         </div>
