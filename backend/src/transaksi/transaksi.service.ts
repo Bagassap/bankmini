@@ -326,4 +326,24 @@ export class TransaksiService {
       );
     }
   }
+
+  async getLastTransaksiPerNasabah(): Promise<Record<string, string>> {
+    try {
+      const grouped = await this.prisma.transaksi.groupBy({
+        by: ['nasabahId'],
+        _max: { createdAt: true },
+      });
+      const result: Record<string, string> = {};
+      for (const row of grouped) {
+        if (row._max.createdAt) {
+          result[row.nasabahId] = row._max.createdAt.toISOString();
+        }
+      }
+      return result;
+    } catch {
+      throw new InternalServerErrorException(
+        'Gagal mengambil transaksi terakhir per nasabah',
+      );
+    }
+  }
 }

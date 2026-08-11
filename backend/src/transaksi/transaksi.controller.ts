@@ -54,6 +54,12 @@ export class TransaksiController {
     return this.transaksiService.getTransaksiStats();
   }
 
+  @Get('last-per-nasabah')
+  @UseGuards(StaffOnlyGuard)
+  getLastPerNasabah() {
+    return this.transaksiService.getLastTransaksiPerNasabah();
+  }
+
   @Patch(':id')
   @UseGuards(StaffOnlyGuard, RolesGuard)
   @Roles(Role.admin, Role.superadmin)

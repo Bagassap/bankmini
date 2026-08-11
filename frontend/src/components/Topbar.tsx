@@ -260,7 +260,7 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
         </AnimatePresence>
       </div>
 
-      <div className="relative hidden sm:block">
+      <div className="relative hidden shrink-0 sm:block">
         <motion.button
           type="button"
           onClick={() => toggleMenu("clock")}

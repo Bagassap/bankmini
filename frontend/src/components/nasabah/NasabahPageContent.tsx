@@ -356,6 +356,31 @@ function uniqueSheetName(rawName: string, used: Set<string>): string {
   return candidate;
 }
 
+// NPY guru berformat ddmmyyyy+urutan (3 digit), 8 digit pertama adalah
+// tanggal (mis. "15072003" = 15 Juli 2003). Susun ulang jadi yyyymmdd
+// supaya perbandingan string-nya benar-benar kronologis (bukan urutan
+// digit ddmmyyyy apa adanya, yang salah karena hari/bulan mendahului
+// tahun). "Nurul Arifah" memakai NPY placeholder ("1919191919") yang
+// tidak mengikuti format tanggal asli, jadi selalu ditaruh paling akhir.
+function npyDateKey(username: string | null | undefined): string {
+  const key = (username ?? "").slice(0, 8);
+  if (key.length !== 8) return key;
+  const dd = key.slice(0, 2);
+  const mm = key.slice(2, 4);
+  const yyyy = key.slice(4, 8);
+  return `${yyyy}${mm}${dd}`;
+}
+
+function compareGuruByNpy(a: Nasabah, b: Nasabah): number {
+  const aLast = a.nama.trim().toLowerCase() === "nurul arifah";
+  const bLast = b.nama.trim().toLowerCase() === "nurul arifah";
+  if (aLast && bLast) return 0;
+  if (aLast) return 1;
+  if (bLast) return -1;
+
+  return npyDateKey(a.username).localeCompare(npyDateKey(b.username));
+}
+
 export function NasabahPageContent() {
   const [activeTab, setActiveTab] = useState<Tab>("sekolah");
   const [nasabahList, setNasabahList] = useState<Nasabah[]>([]);
@@ -380,14 +405,30 @@ export function NasabahPageContent() {
   async function loadNasabah() {
     setLoading(true);
     try {
-      const effectiveJenis =
-        activeTab === "umum" ? "umum" : jenisFilter || undefined;
-      const { data } = await api.get<Nasabah[]>("/nasabah", {
-        params: {
-          jenis: effectiveJenis,
-          search: search || undefined,
-        },
-      });
+      let data: Nasabah[];
+      // Wali kelas adalah guru juga, jadi filter "Guru" ikut memuat wali
+      // kelas (bukan cuma jenisNasabah === "guru" secara ketat).
+      if (activeTab === "sekolah" && jenisFilter === "guru") {
+        const [guruRes, waliKelasRes] = await Promise.all([
+          api.get<Nasabah[]>("/nasabah", {
+            params: { jenis: "guru", search: search || undefined },
+          }),
+          api.get<Nasabah[]>("/nasabah", {
+            params: { jenis: "wali_kelas", search: search || undefined },
+          }),
+        ]);
+        data = [...guruRes.data, ...waliKelasRes.data];
+      } else {
+        const effectiveJenis =
+          activeTab === "umum" ? "umum" : jenisFilter || undefined;
+        const res = await api.get<Nasabah[]>("/nasabah", {
+          params: {
+            jenis: effectiveJenis,
+            search: search || undefined,
+          },
+        });
+        data = res.data;
+      }
       const scoped =
         activeTab === "sekolah" && !jenisFilter
           ? data.filter((n) => n.jenisNasabah !== "umum")
@@ -450,6 +491,9 @@ export function NasabahPageContent() {
         if (kelasCompare !== 0) return kelasCompare;
         return (a.nis ?? "").localeCompare(b.nis ?? "", undefined, { numeric: true });
       });
+    }
+    if (jenisFilter === "guru" || jenisFilter === "wali_kelas") {
+      return [...filtered].sort(compareGuruByNpy);
     }
     return [...filtered].sort((a, b) => {
       if (sortBy === "nama") return a.nama.localeCompare(b.nama);
@@ -539,6 +583,7 @@ export function NasabahPageContent() {
     rows: Nasabah[],
     idLabel: string,
     idValue: (n: Nasabah) => string,
+    lastTransaksiMap: Record<string, string>,
     showJabatan = false,
   ) {
     const PRIMARY = "FF1120F0";
@@ -556,7 +601,7 @@ export function NasabahPageContent() {
       { key: "idNumber", width: 18 },
       { key: "saldo", width: 20 },
       { key: "status", width: 14 },
-      { key: "createdAt", width: 20 },
+      { key: "lastTransaksi", width: 22 },
       ...(showJabatan ? [{ key: "jabatan", width: 34 }] : []),
     ];
     const sheet = workbook.addWorksheet(sheetName, {
@@ -586,7 +631,7 @@ export function NasabahPageContent() {
       idLabel,
       "Saldo (Rp)",
       "Status",
-      "Terdaftar",
+      "Transaksi Terakhir",
       ...(showJabatan ? ["Jabatan"] : []),
     ];
     const headerRow = sheet.getRow(2);
@@ -608,7 +653,9 @@ export function NasabahPageContent() {
         idNumber: idValue(n),
         saldo: Number(n.saldo),
         status: n.status === "aktif" ? "Aktif" : "Nonaktif",
-        createdAt: formatDate(n.createdAt),
+        lastTransaksi: lastTransaksiMap[n.id]
+          ? formatDate(lastTransaksiMap[n.id])
+          : "Belum ada transaksi",
         ...(showJabatan ? { jabatan: n.jabatan ?? "Guru" } : {}),
       });
       const isAktif = n.status === "aktif";
@@ -649,9 +696,7 @@ export function NasabahPageContent() {
     // Wali kelas adalah guru juga (cuma beda tanggung jawab) - gabung ke
     // satu grup "Guru" yang sama, bukan dipisah, supaya semua nasabah
     // guru benar-benar tercakup lengkap di satu tempat.
-    const semuaGuru = [...guruRes.data, ...waliKelasRes.data].sort((a, b) =>
-      a.nama.localeCompare(b.nama),
-    );
+    const semuaGuru = [...guruRes.data, ...waliKelasRes.data].sort(compareGuruByNpy);
 
     const byKelas = new Map<string, Nasabah[]>();
     siswaRes.data.forEach((n) => {
@@ -681,6 +726,11 @@ export function NasabahPageContent() {
       workbook.creator = "Bank Mini NUSA";
       workbook.created = new Date();
 
+      const lastTransaksiRes = await api.get<Record<string, string>>(
+        "/transaksi/last-per-nasabah",
+      );
+      const lastTransaksiMap = lastTransaksiRes.data;
+
       if (activeTab === "sekolah") {
         const { semuaGuru, kelasEntries } = await fetchSekolahSaldoData();
 
@@ -691,13 +741,22 @@ export function NasabahPageContent() {
           semuaGuru,
           "NPY",
           (n) => n.username ?? "-",
+          lastTransaksiMap,
           true,
         );
 
         const usedSheetNames = new Set<string>(["Guru"]);
         kelasEntries.forEach(({ kelas, siswa }) => {
           const sheetName = uniqueSheetName(kelas, usedSheetNames);
-          addSaldoSheet(workbook, sheetName, `Kelas ${kelas}`, siswa, "NIS", (n) => n.nis ?? "-");
+          addSaldoSheet(
+            workbook,
+            sheetName,
+            `Kelas ${kelas}`,
+            siswa,
+            "NIS",
+            (n) => n.nis ?? "-",
+            lastTransaksiMap,
+          );
         });
       } else {
         addSaldoSheet(
@@ -707,6 +766,7 @@ export function NasabahPageContent() {
           displayList,
           "NIS",
           (n) => n.nis ?? "-",
+          lastTransaksiMap,
         );
       }
 

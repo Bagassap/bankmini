@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { compareGuruByNpy } from '../common/guru-sort';
 
 const SIMPANAN_POKOK_NOMINAL = 500_000;
 const SIMPANAN_WAJIB_NOMINAL = 10_000;
@@ -59,14 +60,14 @@ export class SimpananService {
 
   async getRingkasan(): Promise<SimpananRingkasanItem[]> {
     try {
-      const guruList = await this.prisma.nasabah.findMany({
+      const guruListRaw = await this.prisma.nasabah.findMany({
         where: { jenisNasabah: 'guru' },
-        orderBy: { nama: 'asc' },
         include: {
           simpananPokok: true,
           simpananWajib: true,
         },
       });
+      const guruList = [...guruListRaw].sort(compareGuruByNpy);
 
       return guruList.map((n) => {
         const pokok = n.simpananPokok ? Number(n.simpananPokok.nominal) : 0;
@@ -180,9 +181,8 @@ export class SimpananService {
 
   async getHariRayaRingkasan(): Promise<SimpananHariRayaRingkasanItem[]> {
     try {
-      const guruList = await this.prisma.nasabah.findMany({
+      const guruListRaw = await this.prisma.nasabah.findMany({
         where: { jenisNasabah: 'guru' },
-        orderBy: { nama: 'asc' },
         include: {
           simpananHariRaya: true,
           simpananHariRayaAnggota: true,
@@ -192,6 +192,7 @@ export class SimpananService {
           },
         },
       });
+      const guruList = [...guruListRaw].sort(compareGuruByNpy);
 
       return guruList.map((n) => {
         const lastPencairan = n.simpananHariRayaPencairan[0] ?? null;
