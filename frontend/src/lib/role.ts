@@ -39,3 +39,17 @@ export function hasLinkedStaff(user: User | null): boolean {
 export function linkedStaffRole(user: User | null): Role | null {
   return user?.linkedStaff?.role ?? null;
 }
+
+// Ke mana pengguna yang sudah login diarahkan - dipakai halaman publik
+// (splash "/" dan "/login") supaya sesi yang masih valid tidak pernah
+// ditampilkan form login/splash lagi, langsung masuk ke area masing-masing.
+export function resolveAuthedDestination(user: User): string {
+  if (isNasabahRole(user)) {
+    const staffRole = linkedStaffRole(user);
+    if (staffRole) {
+      return isTellerTierRoleValue(staffRole) ? "/dashboard" : "/admin/dashboard";
+    }
+    return "/portal/dashboard";
+  }
+  return isAdminRole(user) ? "/admin/dashboard" : "/dashboard";
+}

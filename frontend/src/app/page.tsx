@@ -6,17 +6,16 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import { resolveAuthedDestination } from "@/lib/role";
 import logo from "@/assets/logo bank-mini1.png";
 
 const REDIRECT_DELAY_MS = 3600;
-const TITLE_LINE_1 = "Bank Mini";
-const TITLE_LINE_2 = "NUSA";
 
 async function resolveDestination(): Promise<string> {
   await useAuthStore.getState().hydrate();
   const { status, user } = useAuthStore.getState();
   if (status !== "authenticated" || !user) return "/login";
-  return user.accountType === "nasabah" ? "/portal" : "/dashboard";
+  return resolveAuthedDestination(user);
 }
 
 export default function Home() {
@@ -77,45 +76,6 @@ export default function Home() {
             Platform Perbankan Sekolah
           </span>
         </motion.div>
-
-        <h1 className="mt-6 flex flex-col items-center justify-center text-center text-4xl font-black leading-tight tracking-tight text-white sm:text-6xl">
-          <div className="flex flex-wrap justify-center">
-            {TITLE_LINE_1.split("").map((char, i) => (
-              <motion.span
-                key={`line1-${i}`}
-                initial={{ opacity: 0, y: 28, rotateX: -70 }}
-                animate={{ opacity: 1, y: 0, rotateX: 0 }}
-                transition={{
-                  duration: 0.5,
-                  delay: 0.7 + i * 0.03,
-                  ease: [0.16, 1, 0.3, 1],
-                }}
-                className="inline-block"
-                style={{ transformOrigin: "bottom", perspective: 400 }}
-              >
-                {char === " " ? " " : char}
-              </motion.span>
-            ))}
-          </div>
-          <div className="flex flex-wrap justify-center">
-            {TITLE_LINE_2.split("").map((char, i) => (
-              <motion.span
-                key={`line2-${i}`}
-                initial={{ opacity: 0, y: 28, rotateX: -70 }}
-                animate={{ opacity: 1, y: 0, rotateX: 0 }}
-                transition={{
-                  duration: 0.5,
-                  delay: 0.7 + (TITLE_LINE_1.length + i) * 0.03,
-                  ease: [0.16, 1, 0.3, 1],
-                }}
-                className="inline-block"
-                style={{ transformOrigin: "bottom", perspective: 400 }}
-              >
-                {char}
-              </motion.span>
-            ))}
-          </div>
-        </h1>
 
         <motion.div
           initial={{ opacity: 0 }}

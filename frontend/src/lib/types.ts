@@ -122,6 +122,22 @@ export interface KelasSummary {
   siswa: KelasSummarySiswa[];
 }
 
+export interface AppNotification {
+  id: string;
+  recipientType: "staff_broadcast" | "nasabah";
+  nasabahId: string | null;
+  type: string;
+  title: string;
+  description: string;
+  link: string | null;
+  createdAt: string;
+}
+
+export interface NotificationListResult {
+  items: AppNotification[];
+  unreadCount: number;
+}
+
 export interface TransaksiStats {
   tanggal: string;
   setor: { jumlahTransaksi: number; totalNominal: string | number };

@@ -12,6 +12,15 @@ import { JenisNasabah, Nasabah, Prisma, StatusNasabah } from '../generated/prism
 import { PrismaService } from '../prisma/prisma.service';
 import { wibDateParts } from '../common/wib-date';
 import { PasswordVaultService } from '../common/password-vault.service';
+import { NotificationsService } from '../notifications/notifications.service';
+
+const JENIS_LABEL: Record<JenisNasabah, string> = {
+  siswa: 'siswa',
+  guru: 'guru',
+  wali_kelas: 'wali kelas',
+  umum: 'umum',
+  kelas: 'kelas',
+};
 
 export interface CreateNasabahInput {
   nama: string;
@@ -58,6 +67,7 @@ export class NasabahService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly passwordVault: PasswordVaultService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private excludePassword(nasabah: Nasabah): SafeNasabah {
@@ -212,6 +222,16 @@ export class NasabahService {
               passwordPlainEncrypted,
             },
           });
+          if (nasabah.jenisNasabah !== 'kelas') {
+            this.notificationsService
+              .create({
+                recipientType: 'staff_broadcast',
+                type: 'nasabah_baru',
+                title: 'Nasabah baru terdaftar',
+                description: `${nasabah.nama} mendaftar sebagai nasabah ${JENIS_LABEL[nasabah.jenisNasabah]}`,
+              })
+              .catch(() => {});
+          }
           return this.excludePassword(nasabah);
         } catch (error) {
           if (

@@ -12,6 +12,8 @@ import {
   JenisPiutang,
   Prisma,
 } from '../generated/prisma/client';
+import { formatRupiah } from '../common/format-rupiah';
+import { NotificationsService } from '../notifications/notifications.service';
 
 type PiutangWithRelations = Prisma.PiutangGetPayload<{
   include: {
@@ -71,7 +73,10 @@ export interface PiutangAngsuranHistoryItem {
 
 @Injectable()
 export class PiutangService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async getRingkasan(): Promise<PiutangRingkasanItem[]> {
     try {
@@ -257,7 +262,7 @@ export class PiutangService {
         where: { nasabahId },
       });
 
-      return await this.prisma.piutang.create({
+      const piutang = await this.prisma.piutang.create({
         data: {
           nasabahId,
           pinjamanKe: pinjamanSebelumnya + 1,
@@ -273,6 +278,28 @@ export class PiutangService {
           processedById,
         },
       });
+
+      const jumlahLabel = formatRupiah(jumlahPinjaman);
+      this.notificationsService
+        .create({
+          recipientType: 'staff_broadcast',
+          type: 'piutang_baru',
+          title: 'Pinjaman baru dicairkan',
+          description: `${nasabah.nama} mencairkan pinjaman ${jumlahLabel}`,
+        })
+        .catch(() => {});
+      this.notificationsService
+        .create({
+          recipientType: 'nasabah',
+          nasabahId,
+          type: 'piutang_baru',
+          title: 'Pinjaman Anda telah dicairkan',
+          description: `Pinjaman sebesar ${jumlahLabel} telah dicairkan ke rekening Anda`,
+          link: '/portal/riwayat',
+        })
+        .catch(() => {});
+
+      return piutang;
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Gagal menambahkan piutang');

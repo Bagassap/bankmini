@@ -8,6 +8,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { compareGuruByNpy } from '../common/guru-sort';
+import { formatRupiah } from '../common/format-rupiah';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const SIMPANAN_POKOK_NOMINAL = 500_000;
 const SIMPANAN_WAJIB_NOMINAL = 10_000;
@@ -56,7 +58,10 @@ export interface SimpananHariRayaHistoryItem {
 
 @Injectable()
 export class SimpananService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async getRingkasan(): Promise<SimpananRingkasanItem[]> {
     try {
@@ -423,7 +428,7 @@ export class SimpananService {
 
       const total = deposits.reduce((sum, d) => sum + Number(d.nominal), 0);
 
-      return await this.prisma.simpananHariRayaPencairan.create({
+      const pencairan = await this.prisma.simpananHariRayaPencairan.create({
         data: {
           nasabahId,
           totalDicairkan: total,
@@ -431,6 +436,19 @@ export class SimpananService {
           processedById,
         },
       });
+
+      this.notificationsService
+        .create({
+          recipientType: 'nasabah',
+          nasabahId,
+          type: 'simpanan_hari_raya_pencairan',
+          title: 'Simpanan hari raya dicairkan',
+          description: `Simpanan hari raya Anda sebesar ${formatRupiah(total)} telah dicairkan`,
+          link: '/portal/riwayat',
+        })
+        .catch(() => {});
+
+      return pencairan;
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(

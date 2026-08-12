@@ -51,6 +51,19 @@ export function formatDateOnlyID(value: string | Date): string {
   }).format(date);
 }
 
+export function formatRelativeTimeID(value: string | Date): string {
+  const date = typeof value === "string" ? new Date(value) : value;
+  const diffSec = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (diffSec < 60) return "Baru saja";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} menit lalu`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} jam lalu`;
+  const diffDay = Math.floor(diffHour / 24);
+  if (diffDay < 7) return `${diffDay} hari lalu`;
+  return formatDateOnlyID(date);
+}
+
 export function formatTime(value: string | Date): string {
   const date = typeof value === "string" ? new Date(value) : value;
   return new Intl.DateTimeFormat("id-ID", {

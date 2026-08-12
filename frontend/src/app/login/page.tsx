@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { motion } from "framer-motion";
@@ -8,7 +8,7 @@ import { Eye, EyeOff, Lock, Loader2, User } from "lucide-react";
 import { notify } from "@/store/notifyStore";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/error";
-import { isAdminRole, isTellerTierRoleValue } from "@/lib/role";
+import { isAdminRole, isTellerTierRoleValue, resolveAuthedDestination } from "@/lib/role";
 import { useAuthStore } from "@/store/authStore";
 import type { AccountType, User as AuthUser } from "@/lib/types";
 import FloatingBlobs from "@/components/FloatingBlobs";
@@ -40,7 +40,29 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const year = new Date().getFullYear();
+
+  useEffect(() => {
+    let cancelled = false;
+    // Kalau sesi masih valid, jangan sampai form login tampil lagi -
+    // langsung lempar ke dashboard/portal masing-masing.
+    useAuthStore
+      .getState()
+      .hydrate()
+      .then(() => {
+        if (cancelled) return;
+        const { status, user } = useAuthStore.getState();
+        if (status === "authenticated" && user) {
+          router.replace(resolveAuthedDestination(user));
+        } else {
+          setCheckingSession(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -69,6 +91,14 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (checkingSession) {
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center bg-background">
+        <Loader2 size={28} className="animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (

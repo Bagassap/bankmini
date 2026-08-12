@@ -13,6 +13,8 @@ import {
   wibDateParts,
   wibDayRangeFromDateOnly,
 } from '../common/wib-date';
+import { formatRupiah } from '../common/format-rupiah';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export interface SetorTarikInput {
   nasabahId: string;
@@ -36,7 +38,39 @@ export interface AllTransaksiFilter {
 
 @Injectable()
 export class TransaksiService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
+
+  private notifyTransaksi(
+    transaksi: Transaksi,
+    nasabahNama: string,
+    jenis: 'setor' | 'tarik',
+  ) {
+    const jumlahLabel = formatRupiah(transaksi.jumlah);
+    const isSetor = jenis === 'setor';
+    this.notificationsService
+      .create({
+        recipientType: 'staff_broadcast',
+        type: isSetor ? 'transaksi_setor' : 'transaksi_tarik',
+        title: isSetor ? 'Setoran baru diterima' : 'Penarikan tunai diproses',
+        description: `${nasabahNama} ${isSetor ? 'menyetor' : 'menarik'} ${jumlahLabel}`,
+      })
+      .catch(() => {});
+    this.notificationsService
+      .create({
+        recipientType: 'nasabah',
+        nasabahId: transaksi.nasabahId,
+        type: isSetor ? 'transaksi_setor' : 'transaksi_tarik',
+        title: isSetor ? 'Setoran berhasil diterima' : 'Penarikan berhasil diproses',
+        description: isSetor
+          ? `Saldo rekening Anda bertambah ${jumlahLabel}`
+          : `Saldo rekening Anda berkurang ${jumlahLabel}`,
+        link: '/portal/riwayat',
+      })
+      .catch(() => {});
+  }
 
   private async generateNoTransaksi(
     tx: Prisma.TransactionClient,
@@ -61,7 +95,8 @@ export class TransaksiService {
         throw new BadRequestException('Jumlah setor harus lebih dari 0');
       }
 
-      return await this.prisma.$transaction(async (tx) => {
+      let nasabahNama = '';
+      const transaksi = await this.prisma.$transaction(async (tx) => {
         const nasabah = await tx.nasabah.findUnique({
           where: { id: input.nasabahId },
         });
@@ -70,6 +105,7 @@ export class TransaksiService {
             `Nasabah dengan id ${input.nasabahId} tidak ditemukan`,
           );
         }
+        nasabahNama = nasabah.nama;
 
         const saldoSebelum = nasabah.saldo;
         const saldoSesudah = saldoSebelum.add(jumlah);
@@ -94,6 +130,8 @@ export class TransaksiService {
           },
         });
       });
+      this.notifyTransaksi(transaksi, nasabahNama, 'setor');
+      return transaksi;
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Gagal melakukan setor');
@@ -107,7 +145,8 @@ export class TransaksiService {
         throw new BadRequestException('Jumlah tarik harus lebih dari 0');
       }
 
-      return await this.prisma.$transaction(async (tx) => {
+      let nasabahNama = '';
+      const transaksi = await this.prisma.$transaction(async (tx) => {
         const nasabah = await tx.nasabah.findUnique({
           where: { id: input.nasabahId },
         });
@@ -116,6 +155,7 @@ export class TransaksiService {
             `Nasabah dengan id ${input.nasabahId} tidak ditemukan`,
           );
         }
+        nasabahNama = nasabah.nama;
 
         const saldoSebelum = nasabah.saldo;
         if (saldoSebelum.lt(jumlah)) {
@@ -143,6 +183,8 @@ export class TransaksiService {
           },
         });
       });
+      this.notifyTransaksi(transaksi, nasabahNama, 'tarik');
+      return transaksi;
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Gagal melakukan tarik');

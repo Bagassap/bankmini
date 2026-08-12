@@ -45,15 +45,16 @@ enum AccountType {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  username  String    @unique
-  password  String
-  nama      String
-  role      Role      @default(teller)
-  isActive  Boolean   @default(true)
-  lastLogin DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id                     String    @id @default(uuid())
+  username               String    @unique
+  password               String
+  nama                   String
+  role                   Role      @default(teller)
+  isActive               Boolean   @default(true)
+  lastLogin              DateTime?
+  lastNotificationReadAt DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
   transaksiProcessed                 Transaksi[]                 @relation("ProcessedBy")
   transaksiEdited                    Transaksi[]                 @relation("EditedBy")
@@ -93,6 +94,7 @@ model Nasabah {
   passwordPlainEncrypted String?
   isActive               Boolean       @default(true)
   lastLogin              DateTime?
+  lastNotificationReadAt DateTime?
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
 
@@ -103,6 +105,7 @@ model Nasabah {
   simpananHariRayaPencairan SimpananHariRayaPencairan[]
   simpananHariRayaAnggota   SimpananHariRayaAnggota[]
   piutang                   Piutang[]
+  notifications             Notification[]
 
   @@map("nasabah")
 }
@@ -321,4 +324,30 @@ model PiutangAngsuran {
 
   @@index([piutangId])
   @@map("piutang_angsuran")
+}
+
+enum NotificationRecipientType {
+  staff_broadcast
+  nasabah
+}
+
+// `staff_broadcast` notifications are visible to every staff User; unread
+// state is derived by comparing `createdAt` against the reader's
+// `User.lastNotificationReadAt` (no per-user read-tracking table needed at
+// this scale). `nasabah` notifications are scoped to one `nasabahId` and
+// use `Nasabah.lastNotificationReadAt` the same way.
+model Notification {
+  id            String                    @id @default(uuid())
+  recipientType NotificationRecipientType
+  nasabahId     String?
+  nasabah       Nasabah?                  @relation(fields: [nasabahId], references: [id], onDelete: Cascade)
+  type          String
+  title         String
+  description   String
+  link          String?
+  createdAt     DateTime                  @default(now())
+
+  @@index([recipientType, createdAt])
+  @@index([nasabahId, createdAt])
+  @@map("notifications")
 }

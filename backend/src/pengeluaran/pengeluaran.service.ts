@@ -7,6 +7,8 @@ import {
 import { Pengeluaran, Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { wibDayRangeFromDateOnly } from '../common/wib-date';
+import { formatRupiah } from '../common/format-rupiah';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export interface CreatePengeluaranInput {
   keterangan: string;
@@ -27,11 +29,14 @@ const INCLUDE = {
 
 @Injectable()
 export class PengeluaranService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async create(input: CreatePengeluaranInput): Promise<Pengeluaran> {
     try {
-      return await this.prisma.pengeluaran.create({
+      const pengeluaran = await this.prisma.pengeluaran.create({
         data: {
           keterangan: input.keterangan,
           jumlah: new Prisma.Decimal(input.jumlah),
@@ -39,6 +44,15 @@ export class PengeluaranService {
         },
         include: INCLUDE,
       });
+      this.notificationsService
+        .create({
+          recipientType: 'staff_broadcast',
+          type: 'pengeluaran_baru',
+          title: 'Pengeluaran operasional baru',
+          description: `${pengeluaran.keterangan}: ${formatRupiah(pengeluaran.jumlah)}`,
+        })
+        .catch(() => {});
+      return pengeluaran;
     } catch {
       throw new InternalServerErrorException('Gagal mencatat pengeluaran');
     }
