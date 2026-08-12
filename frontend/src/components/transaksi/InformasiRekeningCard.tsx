@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Landmark, Loader2, Search, Tag, UserCircle2 } from "lucide-react";
+import { Building2, Landmark, Loader2, School, Search, Tag, UserCircle2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { JENIS_ICON, jenisLabel } from "@/lib/transaksiMeta";
 import type { Nasabah } from "@/lib/types";
@@ -14,6 +14,9 @@ export function InformasiRekeningCard({
   suggestions = [],
   suggestionsLoading = false,
   onSelectSuggestion,
+  kelasFilter = "",
+  onKelasFilterChange,
+  kelasOptions = [],
 }: {
   noRekening: string;
   onNoRekeningChange: (value: string) => void;
@@ -23,14 +26,17 @@ export function InformasiRekeningCard({
   suggestions?: Nasabah[];
   suggestionsLoading?: boolean;
   onSelectSuggestion?: (nasabah: Nasabah) => void;
+  kelasFilter?: string;
+  onKelasFilterChange?: (value: string) => void;
+  kelasOptions?: string[];
 }) {
   const showDropdown = !nasabah && (suggestions.length > 0 || suggestionsLoading);
 
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-background-card p-5 shadow-soft">
+    <div className="relative rounded-3xl bg-background-card p-5 shadow-soft">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.03] bg-[radial-gradient(circle,rgba(17,32,240,0.9)_1px,transparent_1px)] bg-size-[16px_16px]"
+        className="pointer-events-none absolute inset-0 overflow-hidden rounded-3xl opacity-[0.03] bg-[radial-gradient(circle,rgba(17,32,240,0.9)_1px,transparent_1px)] bg-size-[16px_16px]"
       />
       <div className="relative mb-4 flex items-center justify-between gap-2">
         <div className="flex items-center gap-3">
@@ -50,86 +56,115 @@ export function InformasiRekeningCard({
       </div>
 
       <form onSubmit={onSubmit} className="relative mb-4">
-        <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
-          <Landmark size={12} className="text-primary" />
-          Nomor Rekening atau Nama Nasabah
-        </label>
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Building2
-              size={16}
-              className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-text-muted"
-            />
-            <input
-              type="text"
-              value={noRekening}
-              onChange={(e) => onNoRekeningChange(e.target.value)}
-              placeholder="Contoh: 0981223445 atau nama nasabah"
-              autoComplete="off"
-              className="w-full rounded-xl border border-transparent bg-background-hover py-2.5 pr-3 pl-9 text-sm text-text-primary transition-shadow focus:border-primary focus:bg-background-card focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
+        <div className="flex flex-col gap-3 sm:flex-row">
+          {onKelasFilterChange && (
+            <div className="sm:w-56 sm:shrink-0">
+              <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+                <School size={12} className="text-primary" />
+                Kelas
+              </label>
+              <select
+                value={kelasFilter}
+                onChange={(e) => onKelasFilterChange(e.target.value)}
+                className="w-full rounded-xl border border-transparent bg-background-hover px-3 py-2.5 text-sm text-text-primary transition-shadow focus:border-primary focus:bg-background-card focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="">Semua Kelas</option>
+                {kelasOptions.map((k) => (
+                  <option key={k} value={k}>
+                    {k}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-            <AnimatePresence>
-              {showDropdown && (
-                <motion.div
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute inset-x-0 top-full z-20 mt-1.5 overflow-hidden rounded-xl border border-border bg-background-card shadow-soft"
-                >
-                  {suggestionsLoading ? (
-                    <div className="flex items-center gap-2 px-3 py-3 text-xs text-text-secondary">
-                      <Loader2 size={13} className="animate-spin text-primary" />
-                      Mencari nasabah...
-                    </div>
-                  ) : (
-                    suggestions.map((item) => {
-                      const Icon = JENIS_ICON[item.jenisNasabah];
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => onSelectSuggestion?.(item)}
-                          className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-background-hover"
-                        >
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                            <Icon size={14} />
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-semibold text-text-primary">
-                              {item.nama}
-                            </span>
-                            <span className="flex items-center gap-1 font-mono text-[11px] text-text-muted">
-                              {item.noRekening}
-                              <span className="text-text-muted/60">&middot;</span>
-                              {jenisLabel[item.jenisNasabah]}
-                            </span>
-                          </span>
-                        </button>
-                      );
-                    })
+          <div className="flex-1">
+            <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+              <Landmark size={12} className="text-primary" />
+              Nomor Rekening atau Nama Nasabah
+            </label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Building2
+                  size={16}
+                  className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-text-muted"
+                />
+                <input
+                  type="text"
+                  value={noRekening}
+                  onChange={(e) => onNoRekeningChange(e.target.value)}
+                  placeholder="Contoh: 0981223445 atau nama nasabah"
+                  autoComplete="off"
+                  className="w-full rounded-xl border border-transparent bg-background-hover py-2.5 pr-3 pl-9 text-sm text-text-primary transition-shadow focus:border-primary focus:bg-background-card focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+
+                <AnimatePresence>
+                  {showDropdown && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute inset-x-0 top-full z-20 mt-1.5 max-h-96 overflow-y-auto rounded-xl border border-border bg-background-card shadow-soft"
+                    >
+                      {suggestionsLoading ? (
+                        <div className="flex items-center gap-2 px-4 py-4 text-sm text-text-secondary">
+                          <Loader2 size={16} className="animate-spin text-primary" />
+                          Mencari nasabah...
+                        </div>
+                      ) : (
+                        suggestions.map((item) => {
+                          const Icon = JENIS_ICON[item.jenisNasabah];
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => onSelectSuggestion?.(item)}
+                              className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-background-hover"
+                            >
+                              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                <Icon size={20} />
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-base font-bold text-text-primary">
+                                  {item.nama}
+                                </span>
+                                <span className="flex items-center gap-1.5 font-mono text-sm text-text-muted">
+                                  {item.noRekening}
+                                  <span className="text-text-muted/60">&middot;</span>
+                                  {item.jenisNasabah === "siswa" && item.nis
+                                    ? `NIS ${item.nis}`
+                                    : jenisLabel[item.jenisNasabah]}
+                                </span>
+                              </span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </motion.div>
                   )}
-                </motion.div>
-              )}
-            </AnimatePresence>
+                </AnimatePresence>
+              </div>
+              <motion.button
+                type="submit"
+                whileTap={{ scale: 0.95 }}
+                disabled={searching}
+                className="flex shrink-0 items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary-dark disabled:opacity-50"
+              >
+                {searching ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Search size={14} />
+                )}
+                {searching ? "Mencari..." : "Cari Data"}
+              </motion.button>
+            </div>
           </div>
-          <motion.button
-            type="submit"
-            whileTap={{ scale: 0.95 }}
-            disabled={searching}
-            className="flex shrink-0 items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary-dark disabled:opacity-50"
-          >
-            {searching ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Search size={14} />
-            )}
-            {searching ? "Mencari..." : "Cari Data"}
-          </motion.button>
         </div>
         <p className="mt-1.5 text-[11px] text-text-muted">
-          Ketik nama untuk melihat saran, atau tekan Enter untuk pencarian No Rekening persis
+          {kelasFilter
+            ? `Menampilkan daftar siswa kelas ${kelasFilter} — ketik nama untuk mempersempit`
+            : "Ketik nama untuk melihat saran, atau tekan Enter untuk pencarian No Rekening persis"}
         </p>
       </form>
 

@@ -40,6 +40,19 @@ export function linkedStaffRole(user: User | null): Role | null {
   return user?.linkedStaff?.role ?? null;
 }
 
+// Role/id staff yang sebenarnya berlaku untuk pengguna ini, baik login
+// langsung sebagai staff maupun sebagai nasabah dual-role (guru/wali
+// kelas yang juga staff).
+export function effectiveStaffRole(user: User | null): Role | null {
+  if (!user) return null;
+  return user.accountType === "staff" ? (user.role as Role) : linkedStaffRole(user);
+}
+
+export function effectiveStaffId(user: User | null): string | null {
+  if (!user) return null;
+  return user.accountType === "staff" ? user.id : (user.linkedStaff?.id ?? null);
+}
+
 // Ke mana pengguna yang sudah login diarahkan - dipakai halaman publik
 // (splash "/" dan "/login") supaya sesi yang masih valid tidak pernah
 // ditampilkan form login/splash lagi, langsung masuk ke area masing-masing.

@@ -48,6 +48,7 @@ model User {
   id                     String    @id @default(uuid())
   username               String    @unique
   password               String
+  passwordPlainEncrypted String?
   nama                   String
   role                   Role      @default(teller)
   isActive               Boolean   @default(true)

@@ -280,6 +280,82 @@ export class TransaksiService {
     }
   }
 
+  async findTransaksiById(id: string): Promise<Transaksi> {
+    const trx = await this.prisma.transaksi.findUnique({ where: { id } });
+    if (!trx) {
+      throw new NotFoundException('Transaksi tidak ditemukan');
+    }
+    return trx;
+  }
+
+  async deleteTransaksi(id: string): Promise<void> {
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const trx = await tx.transaksi.findUnique({ where: { id } });
+        if (!trx) {
+          throw new NotFoundException('Transaksi tidak ditemukan');
+        }
+
+        const signedEffect = (t: {
+          jenisTransaksi: JenisTransaksi;
+          jumlah: Prisma.Decimal;
+        }) =>
+          t.jenisTransaksi === JenisTransaksi.setor ? t.jumlah : t.jumlah.negated();
+
+        // Menghapus transaksi berarti membatalkan seluruh efeknya.
+        const delta = signedEffect(trx).negated();
+
+        const nasabah = await tx.nasabah.findUnique({
+          where: { id: trx.nasabahId },
+        });
+        if (!nasabah) {
+          throw new NotFoundException('Nasabah tidak ditemukan');
+        }
+        if (nasabah.saldo.add(delta).lt(0)) {
+          throw new BadRequestException(
+            'Menghapus transaksi ini membuat saldo nasabah menjadi negatif',
+          );
+        }
+
+        const laterTrx = await tx.transaksi.findMany({
+          where: {
+            nasabahId: trx.nasabahId,
+            noTransaksi: { gt: trx.noTransaksi },
+          },
+          orderBy: { noTransaksi: 'asc' },
+        });
+
+        for (const t of laterTrx) {
+          if (t.saldoSesudah.add(delta).lt(0)) {
+            throw new BadRequestException(
+              'Menghapus transaksi ini menyebabkan saldo nasabah menjadi negatif pada transaksi setelahnya',
+            );
+          }
+        }
+
+        for (const t of laterTrx) {
+          await tx.transaksi.update({
+            where: { id: t.id },
+            data: {
+              saldoSebelum: t.saldoSebelum.add(delta),
+              saldoSesudah: t.saldoSesudah.add(delta),
+            },
+          });
+        }
+
+        await tx.nasabah.update({
+          where: { id: trx.nasabahId },
+          data: { saldo: { increment: delta } },
+        });
+
+        await tx.transaksi.delete({ where: { id } });
+      });
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException('Gagal menghapus transaksi');
+    }
+  }
+
   async getMutasi(nasabahId: string, filter: MutasiFilter = {}) {
     try {
       const where: Prisma.TransaksiWhereInput = { nasabahId };

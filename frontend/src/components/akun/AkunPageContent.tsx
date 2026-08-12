@@ -372,7 +372,8 @@ export function AkunPageContent() {
     }
   }
 
-  async function toggleReveal(id: string) {
+  async function toggleReveal(row: UnifiedAccount) {
+    const id = row.id;
     if (revealed[id] !== undefined) {
       setRevealed((prev) => {
         const next = { ...prev };
@@ -383,9 +384,8 @@ export function AkunPageContent() {
     }
     setRevealing((prev) => new Set(prev).add(id));
     try {
-      const { data } = await api.get<{ password: string | null }>(
-        `/nasabah/${id}/password`,
-      );
+      const endpoint = row.tipe === "staff" ? `/users/${id}/password` : `/nasabah/${id}/password`;
+      const { data } = await api.get<{ password: string | null }>(endpoint);
       setRevealed((prev) => ({ ...prev, [id]: data.password }));
     } catch (error) {
       notify.error(getErrorMessage(error, "Gagal mengambil password"));
@@ -1000,7 +1000,7 @@ export function AkunPageContent() {
                       </td>
                       <td className="px-4 py-3">
                         {row.tipe === "staff" ? (
-                          <div className="flex gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <motion.button
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.92 }}
@@ -1027,12 +1027,41 @@ export function AkunPageContent() {
                               <Trash2 size={12} />
                               Hapus
                             </motion.button>
+                            <button
+                              type="button"
+                              onClick={() => toggleReveal(row)}
+                              disabled={isRevealing}
+                              className="flex items-center gap-1 rounded-lg bg-primary/10 px-2.5 py-1.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+                            >
+                              {isRevealing ? (
+                                <Loader2 size={12} className="animate-spin" />
+                              ) : revealedValue !== undefined ? (
+                                <EyeOff size={12} />
+                              ) : (
+                                <Eye size={12} />
+                              )}
+                              {revealedValue !== undefined ? "Sembunyikan" : "Lihat"}
+                            </button>
+                            {revealedValue !== undefined && (
+                              <span className="flex items-center gap-1.5 rounded-lg bg-background-hover px-2.5 py-1.5 font-mono text-xs text-text-primary">
+                                {revealedValue ?? "Belum tersedia"}
+                                {revealedValue && (
+                                  <button
+                                    type="button"
+                                    onClick={() => copyToClipboard(revealedValue)}
+                                    className="text-text-muted transition-colors hover:text-primary"
+                                  >
+                                    <Copy size={12} />
+                                  </button>
+                                )}
+                              </span>
+                            )}
                           </div>
                         ) : (
                           <div className="flex flex-wrap items-center gap-2">
                             <button
                               type="button"
-                              onClick={() => toggleReveal(row.id)}
+                              onClick={() => toggleReveal(row)}
                               disabled={isRevealing}
                               className="flex items-center gap-1 rounded-lg bg-primary/10 px-2.5 py-1.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
                             >

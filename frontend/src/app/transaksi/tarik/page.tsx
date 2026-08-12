@@ -35,6 +35,9 @@ export default function TarikTunaiPage() {
     selectSuggestion,
     handleSearch,
     reset: resetLookup,
+    kelasFilter,
+    setKelasFilter,
+    kelasOptions,
   } = useNasabahLookup();
 
   const [jumlah, setJumlah] = useState("");
@@ -95,6 +98,9 @@ export default function TarikTunaiPage() {
             suggestions={suggestions}
             suggestionsLoading={suggestionsLoading}
             onSelectSuggestion={selectSuggestion}
+            kelasFilter={kelasFilter}
+            onKelasFilterChange={setKelasFilter}
+            kelasOptions={kelasOptions}
           />
 
           <motion.div

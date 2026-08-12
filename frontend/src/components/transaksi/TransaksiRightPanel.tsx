@@ -53,18 +53,6 @@ export function TransaksiRightPanel({
             {nasabah ? "Nasabah Terverifikasi" : "Menunggu Input..."}
           </p>
           <div className="relative flex flex-wrap items-center justify-center gap-1.5">
-            <span
-              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                nasabah
-                  ? nasabah.status === "aktif"
-                    ? "bg-white/25 text-white"
-                    : "bg-white/15 text-white/70"
-                  : "bg-white/15 text-white/70"
-              }`}
-            >
-              <CheckCircle2 size={10} />
-              {nasabah ? `Status: ${nasabah.status}` : "Status: -"}
-            </span>
             <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold text-white">
               <JenisIcon size={10} />
               {nasabah ? jenisLabel[nasabah.jenisNasabah] : "-"}
@@ -77,8 +65,22 @@ export function TransaksiRightPanel({
             <span className="flex items-center gap-1.5 text-text-secondary">
               <Hash size={11} style={{ color: GUIDE_COLORS[0] }} /> No. Rekening
             </span>
-            <span className="font-mono font-semibold text-text-primary">
-              {nasabah?.noRekening ?? "-"}
+            <span className="flex items-center gap-1.5">
+              <span className="font-mono font-semibold text-text-primary">
+                {nasabah?.noRekening ?? "-"}
+              </span>
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                  nasabah
+                    ? nasabah.status === "aktif"
+                      ? "bg-success/10 text-success"
+                      : "bg-danger/10 text-danger"
+                    : "bg-background-hover text-text-muted"
+                }`}
+              >
+                <CheckCircle2 size={9} />
+                {nasabah ? nasabah.status : "-"}
+              </span>
             </span>
           </div>
           <div className="flex items-center justify-between text-xs">

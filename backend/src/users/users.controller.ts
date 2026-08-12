@@ -36,6 +36,12 @@ export class UsersController {
     return this.usersService.findById(id);
   }
 
+  @Get(':id/password')
+  async getPassword(@Param('id') id: string) {
+    const password = await this.usersService.getDecryptedPassword(id);
+    return { password };
+  }
+
   @Post()
   create(@Body() dto: CreateUserDto) {
     return this.usersService.create(dto);

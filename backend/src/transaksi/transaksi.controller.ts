@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
@@ -17,7 +18,7 @@ import { StaffOnlyGuard } from '../auth/staff-only.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
-import { resolveStaffId } from '../auth/resolve-staff-id';
+import { resolveStaffId, resolveStaffRole } from '../auth/resolve-staff-id';
 import type { JwtPayload } from '../auth/jwt.strategy';
 
 @Controller('transaksi')
@@ -60,20 +61,43 @@ export class TransaksiController {
     return this.transaksiService.getLastTransaksiPerNasabah();
   }
 
+  // Teller/co_teller cuma boleh edit/hapus transaksi yang mereka proses
+  // sendiri (koreksi salah input) - admin/superadmin bisa untuk semua.
+  private async assertCanModify(id: string, user: JwtPayload): Promise<void> {
+    const role = resolveStaffRole(user);
+    if (role === Role.admin || role === Role.superadmin) return;
+    const trx = await this.transaksiService.findTransaksiById(id);
+    if (trx.processedById !== resolveStaffId(user)) {
+      throw new ForbiddenException(
+        'Hanya dapat mengubah/menghapus transaksi yang Anda proses sendiri',
+      );
+    }
+  }
+
   @Patch(':id')
   @UseGuards(StaffOnlyGuard, RolesGuard)
-  @Roles(Role.admin, Role.superadmin)
-  updateTransaksi(
+  @Roles(Role.teller, Role.co_teller, Role.admin, Role.superadmin)
+  async updateTransaksi(
     @Param('id') id: string,
     @Body() dto: UpdateTransaksiDto,
     @CurrentUser() user: JwtPayload,
   ) {
+    await this.assertCanModify(id, user);
     return this.transaksiService.updateTransaksi(
       id,
       dto.jumlah,
       dto.keterangan,
       resolveStaffId(user),
     );
+  }
+
+  @Delete(':id')
+  @UseGuards(StaffOnlyGuard, RolesGuard)
+  @Roles(Role.teller, Role.co_teller, Role.admin, Role.superadmin)
+  async deleteTransaksi(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    await this.assertCanModify(id, user);
+    await this.transaksiService.deleteTransaksi(id);
+    return { message: 'Transaksi berhasil dihapus' };
   }
 
   @Get('mutasi/:nasabahId')

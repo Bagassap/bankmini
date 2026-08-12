@@ -81,8 +81,9 @@ export class NasabahController {
     @Query('jenis') jenis?: JenisNasabah,
     @Query('status') status?: StatusNasabah,
     @Query('search') search?: string,
+    @Query('kelas') kelas?: string,
   ): Promise<SafeNasabah[]> {
-    return this.nasabahService.findAll({ jenis, status, search });
+    return this.nasabahService.findAll({ jenis, status, search, kelas });
   }
 
   @Post()

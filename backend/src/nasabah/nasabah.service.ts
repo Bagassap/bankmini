@@ -57,10 +57,11 @@ export interface FindAllNasabahFilter {
   jenis?: JenisNasabah;
   status?: StatusNasabah;
   search?: string;
+  kelas?: string;
 }
 
 type PrismaClientOrTx = PrismaService | Prisma.TransactionClient;
-export type SafeNasabah = Omit<Nasabah, 'password'>;
+export type SafeNasabah = Omit<Nasabah, 'password' | 'passwordPlainEncrypted'>;
 
 @Injectable()
 export class NasabahService {
@@ -71,7 +72,7 @@ export class NasabahService {
   ) {}
 
   private excludePassword(nasabah: Nasabah): SafeNasabah {
-    const { password, ...safeNasabah } = nasabah;
+    const { password, passwordPlainEncrypted, ...safeNasabah } = nasabah;
     return safeNasabah;
   }
 
@@ -90,6 +91,7 @@ export class NasabahService {
       const where: Prisma.NasabahWhereInput = {};
       if (filter.jenis) where.jenisNasabah = filter.jenis;
       if (filter.status) where.status = filter.status;
+      if (filter.kelas) where.kelas = filter.kelas;
       if (filter.search) {
         where.OR = [
           { nama: { contains: filter.search, mode: 'insensitive' } },
@@ -99,7 +101,7 @@ export class NasabahService {
 
       const nasabah = await this.prisma.nasabah.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: filter.jenis === 'siswa' ? { nis: 'asc' } : { createdAt: 'desc' },
       });
       return nasabah.map((item) => this.excludePassword(item));
     } catch (error) {

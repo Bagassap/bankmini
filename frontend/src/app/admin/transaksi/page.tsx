@@ -22,6 +22,7 @@ import {
   RefreshCw,
   ShieldCheck,
   TrendingUp,
+  Trash2,
   Users,
   Wallet,
   X,
@@ -80,6 +81,7 @@ export default function AdminTransaksiPage() {
   const [editJumlah, setEditJumlah] = useState("");
   const [editKeterangan, setEditKeterangan] = useState("");
   const [editSaving, setEditSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadTransaksi = useCallback(
     async (isManualRefresh = false) => {
@@ -170,6 +172,26 @@ export default function AdminTransaksiPage() {
       notify.error(getErrorMessage(error, "Gagal memperbarui transaksi"));
     } finally {
       setEditSaving(false);
+    }
+  }
+
+  async function handleDelete(trx: Transaksi) {
+    if (
+      !confirm(
+        `Hapus transaksi ${trx.noTransaksi} (${trx.jenisTransaksi} ${formatCurrency(trx.jumlah)})? Saldo nasabah akan disesuaikan kembali.`,
+      )
+    ) {
+      return;
+    }
+    setDeletingId(trx.id);
+    try {
+      await api.delete(`/transaksi/${trx.id}`);
+      notify.success(`Transaksi ${trx.noTransaksi} berhasil dihapus`);
+      loadTransaksi(true);
+    } catch (error) {
+      notify.error(getErrorMessage(error, "Gagal menghapus transaksi"));
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -602,6 +624,19 @@ export default function AdminTransaksiPage() {
                           >
                             <Pencil size={12} />
                             Edit
+                          </motion.button>
+                          <motion.button
+                            whileTap={{ scale: 0.92 }}
+                            onClick={() => handleDelete(trx)}
+                            disabled={deletingId === trx.id}
+                            className="flex items-center gap-1 rounded-lg bg-danger/10 px-2.5 py-1.5 text-xs font-bold text-danger transition-colors hover:bg-danger/20 disabled:opacity-50"
+                          >
+                            {deletingId === trx.id ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={12} />
+                            )}
+                            Hapus
                           </motion.button>
                         </div>
                       </td>
