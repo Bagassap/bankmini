@@ -471,10 +471,26 @@ export async function downloadNasabahSaldoPdf(
           ])
         : [["-", "Belum ada data", "-", "-", "-"]];
 
+    const totalSaldo = section.rows.reduce((sum, r) => sum + r.saldo, 0);
+
     autoTable(doc, {
       startY: marginX + 82,
       head: [["NO", "NAMA", section.idLabel, "SALDO (RP)", "STATUS"]],
-      body,
+      body:
+        section.rows.length > 0
+          ? [
+              ...body,
+              [
+                {
+                  content: `TOTAL (${section.rows.length} nasabah)`,
+                  colSpan: 3,
+                  styles: { fontStyle: "bold" },
+                },
+                { content: formatRupiah(totalSaldo), styles: { fontStyle: "bold" } },
+                { content: "", styles: {} },
+              ],
+            ]
+          : body,
       theme: "grid",
       styles: {
         font: FONT,
@@ -503,6 +519,12 @@ export async function downloadNasabahSaldoPdf(
         4: { cellWidth: 70, halign: "center" },
       },
       margin: { left: marginX, right: marginX },
+      didParseCell: (data) => {
+        if (section.rows.length > 0 && data.section === "body" && data.row.index === body.length) {
+          data.cell.styles.fillColor = COLOR_PRIMARY_LIGHT;
+          data.cell.styles.textColor = COLOR_PRIMARY;
+        }
+      },
     });
   });
 

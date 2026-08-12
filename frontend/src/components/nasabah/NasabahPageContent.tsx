@@ -398,6 +398,7 @@ export function NasabahPageContent() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState<AddForm>(initialAddForm);
   const [addSaving, setAddSaving] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -494,6 +495,14 @@ export function NasabahPageContent() {
     }
     if (jenisFilter === "guru" || jenisFilter === "wali_kelas") {
       return [...filtered].sort(compareGuruByNpy);
+    }
+    if (jenisFilter === "kelas") {
+      return [...filtered].sort((a, b) =>
+        (a.kelas ?? a.nama).localeCompare(b.kelas ?? b.nama),
+      );
+    }
+    if (activeTab === "umum") {
+      return [...filtered].sort((a, b) => a.nama.localeCompare(b.nama));
     }
     return [...filtered].sort((a, b) => {
       if (sortBy === "nama") return a.nama.localeCompare(b.nama);
@@ -683,6 +692,19 @@ export function NasabahPageContent() {
           cell.alignment = { horizontal: "center" };
         }
       });
+    });
+
+    const totalRow = sheet.addRow({
+      nama: `Total (${rows.length} nasabah)`,
+      saldo: rows.reduce((sum, n) => sum + Number(n.saldo), 0),
+    });
+    totalRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: PRIMARY } };
+      if (colNumber === 4) {
+        cell.numFmt = "#,##0";
+        cell.alignment = { horizontal: "right" };
+      }
     });
   }
 
@@ -948,6 +970,24 @@ export function NasabahPageContent() {
       loadNasabah();
     } catch (error) {
       notify.error(getErrorMessage(error, "Gagal menghapus nasabah"));
+    }
+  }
+
+  async function handleToggleStatus(nasabah: Nasabah) {
+    const nextStatus = nasabah.status === "aktif" ? "nonaktif" : "aktif";
+    const verb = nextStatus === "nonaktif" ? "Nonaktifkan" : "Aktifkan";
+    if (!confirm(`${verb} nasabah ${nasabah.nama} (${nasabah.noRekening})?`)) {
+      return;
+    }
+    setTogglingId(nasabah.id);
+    try {
+      await api.patch(`/nasabah/${nasabah.id}`, { status: nextStatus });
+      notify.success(`Nasabah ${nasabah.nama} berhasil di${verb.toLowerCase()}`);
+      loadNasabah();
+    } catch (error) {
+      notify.error(getErrorMessage(error, "Gagal mengubah status nasabah"));
+    } finally {
+      setTogglingId(null);
     }
   }
 
@@ -1702,7 +1742,7 @@ export function NasabahPageContent() {
                         {formatDate(nasabah.createdAt)}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.92 }}
@@ -1711,6 +1751,26 @@ export function NasabahPageContent() {
                           >
                             <Pencil size={12} />
                             Edit
+                          </motion.button>
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.92 }}
+                            onClick={() => handleToggleStatus(nasabah)}
+                            disabled={togglingId === nasabah.id}
+                            className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold text-white shadow-sm transition-colors disabled:opacity-50 ${
+                              nasabah.status === "aktif"
+                                ? "bg-warning hover:bg-warning/90"
+                                : "bg-success hover:bg-success/90"
+                            }`}
+                          >
+                            {togglingId === nasabah.id ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : nasabah.status === "aktif" ? (
+                              <XCircle size={12} />
+                            ) : (
+                              <CheckCircle2 size={12} />
+                            )}
+                            {nasabah.status === "aktif" ? "Nonaktifkan" : "Aktifkan"}
                           </motion.button>
                           <motion.button
                             whileHover={{ scale: 1.05 }}
