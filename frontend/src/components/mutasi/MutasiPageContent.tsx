@@ -22,6 +22,7 @@ import {
   Receipt,
   Search,
   Trash2,
+  Users,
   Wallet,
   X,
 } from "lucide-react";
@@ -248,13 +249,14 @@ export function MutasiPageContent() {
 
   function exportCsv() {
     const rows = [
-      ["No Transaksi", "Tanggal", "Jenis", "Jumlah", "Saldo Sesudah", "Keterangan"],
+      ["No Transaksi", "Tanggal", "Jenis", "Jumlah", "Saldo Sesudah", "Diproses Oleh", "Keterangan"],
       ...mutasi.map((t) => [
         t.noTransaksi,
         t.createdAt,
         t.jenisTransaksi,
         String(t.jumlah),
         String(t.saldoSesudah),
+        t.processedBy?.nama ?? "",
         t.keterangan ?? "",
       ]),
     ];
@@ -701,6 +703,11 @@ export function MutasiPageContent() {
                 <th className="px-4 py-3 text-xs font-bold tracking-wide text-text-muted uppercase">
                   No Transaksi
                 </th>
+                {isAdminTier && (
+                  <th className="px-4 py-3 text-xs font-bold tracking-wide text-text-muted uppercase">
+                    Diproses Oleh
+                  </th>
+                )}
                 <th className="px-4 py-3 text-xs font-bold tracking-wide text-text-muted uppercase">
                   Keterangan
                 </th>
@@ -725,7 +732,7 @@ export function MutasiPageContent() {
             >
               {displayLoading ? (
                 <tr>
-                  <td colSpan={nasabah ? 7 : 8} className="px-4 py-12 text-center">
+                  <td colSpan={(nasabah ? 7 : 8) + (isAdminTier ? 1 : 0)} className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center gap-2 text-text-secondary">
                       <Loader2 size={22} className="animate-spin text-primary" />
                       Memuat data mutasi...
@@ -734,7 +741,7 @@ export function MutasiPageContent() {
                 </tr>
               ) : displayList.length === 0 ? (
                 <tr>
-                  <td colSpan={nasabah ? 7 : 8} className="px-4 py-12 text-center">
+                  <td colSpan={(nasabah ? 7 : 8) + (isAdminTier ? 1 : 0)} className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center gap-2 text-text-secondary">
                       <ClipboardList size={26} className="text-text-muted" />
                       Tidak ada riwayat transaksi
@@ -780,6 +787,11 @@ export function MutasiPageContent() {
                       <td className="px-4 py-3 font-mono text-xs text-text-secondary">
                         {trx.noTransaksi}
                       </td>
+                      {isAdminTier && (
+                        <td className="px-4 py-3 text-xs font-semibold text-text-secondary">
+                          {trx.processedBy?.nama ?? "-"}
+                        </td>
+                      )}
                       <td
                         className="max-w-40 truncate px-4 py-3 text-xs text-text-secondary"
                         title={trx.keterangan ?? undefined}
@@ -962,6 +974,17 @@ export function MutasiPageContent() {
                     </p>
                   </div>
                 </div>
+
+                {isAdminTier && (
+                  <div className="rounded-2xl border border-border p-3">
+                    <p className="flex items-center gap-1 text-[10px] font-semibold tracking-wide text-text-muted uppercase">
+                      <Users size={10} /> Diproses Oleh
+                    </p>
+                    <p className="mt-0.5 text-sm font-semibold text-text-primary">
+                      {viewing.processedBy?.nama ?? "-"}
+                    </p>
+                  </div>
+                )}
 
                 <div className="rounded-2xl border border-border p-3">
                   <p className="flex items-center gap-1 text-[10px] font-semibold tracking-wide text-text-muted uppercase">
