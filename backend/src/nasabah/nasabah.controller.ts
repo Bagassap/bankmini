@@ -15,6 +15,7 @@ import { CreateNasabahDto } from './dto/create-nasabah.dto';
 import { UpdateNasabahDto } from './dto/update-nasabah.dto';
 import { UpdateOwnProfileDto } from './dto/update-own-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateSaldoDto } from './dto/update-saldo.dto';
 import { StaffOnlyGuard } from '../auth/staff-only.guard';
 import { NasabahOnlyGuard } from '../auth/nasabah-only.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -117,6 +118,23 @@ export class NasabahController {
   @UseGuards(StaffOnlyGuard)
   delete(@Param('id') id: string): Promise<SafeNasabah> {
     return this.nasabahService.delete(id);
+  }
+
+  @Patch(':id/saldo')
+  @UseGuards(StaffOnlyGuard)
+  koreksiSaldo(
+    @Param('id') id: string,
+    @Body() dto: UpdateSaldoDto,
+    @CurrentUser() user: JwtPayload,
+  ): Promise<SafeNasabah> {
+    const staffNama =
+      user.accountType === 'staff' ? user.nama : user.linkedStaff!.nama;
+    return this.nasabahService.koreksiSaldo(
+      id,
+      dto.saldo,
+      dto.alasan,
+      staffNama,
+    );
   }
 
   @Get(':id/password')

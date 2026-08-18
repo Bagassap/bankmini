@@ -1,8 +1,32 @@
 @import "tailwindcss";
 
+/* Neutral tokens (background/surface/text/border) - satu-satunya bagian yang
+   berbeda antara tema terang & gelap. Warna brand/status (primary, gradient,
+   success, danger, dst di bawah) sengaja tetap sama di kedua tema. */
 :root {
   --background: #f4f6fb;
   --foreground: #0f1729;
+  --background-card: #ffffff;
+  --background-hover: #f1f5f9;
+  --text-primary: #0f1729;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --border: #e2e8f0;
+  --chart-track: #e5e7eb;
+  --shadow-soft: 0 4px 20px -2px rgba(15, 23, 41, 0.08);
+}
+
+:root.dark {
+  --background: #0a0f1d;
+  --foreground: #e2e8f0;
+  --background-card: #131b2c;
+  --background-hover: #1c2740;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --border: #263048;
+  --chart-track: #263048;
+  --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.45);
 }
 
 @theme inline {
@@ -10,9 +34,9 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-satoshi);
 
-  /* Primary color system — sumber tunggal warna untuk seluruh app (light theme) */
-  --color-background-card: #ffffff;
-  --color-background-hover: #f1f5f9;
+  /* Primary color system — sumber tunggal warna untuk seluruh app */
+  --color-background-card: var(--background-card);
+  --color-background-hover: var(--background-hover);
 
   --color-primary: #1120f0;
   --color-primary-dark: #0d1ac0;
@@ -38,15 +62,15 @@
 
   --color-chart-primary: #1120f0;
   --color-chart-secondary: #f59e0b;
-  --color-chart-track: #e5e7eb;
+  --color-chart-track: var(--chart-track);
 
-  --color-text-primary: #0f1729;
-  --color-text-secondary: #475569;
-  --color-text-muted: #94a3b8;
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
 
-  --color-border: #e2e8f0;
+  --color-border: var(--border);
 
-  --shadow-soft: 0 4px 20px -2px rgba(15, 23, 41, 0.08);
+  --shadow-soft: var(--shadow-soft);
 }
 
 body {

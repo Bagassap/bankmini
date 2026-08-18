@@ -289,8 +289,8 @@ export function BalanceCard({
                 isAnimationActive
                 animationDuration={700}
               >
-                <Cell fill="#1120f0" />
-                <Cell fill="#e5e7eb" />
+                <Cell fill="var(--color-primary)" />
+                <Cell fill="var(--color-chart-track)" />
               </Pie>
               <Tooltip
                 content={({ active, payload }) => {

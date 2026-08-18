@@ -219,7 +219,7 @@ export default function AdminDashboardPage() {
               tone="orange"
               label="Kas Utama"
               value={kasUtama?.total ?? 0}
-              caption="Transaksi, simpanan, piutang & pengeluaran"
+              caption="Saldo nasabah, simpanan, piutang & pengeluaran"
               icon={Wallet}
               secondaryLabel={
                 (kasUtama?.total ?? 0) >= 0 ? "Kas positif" : "Kas negatif"

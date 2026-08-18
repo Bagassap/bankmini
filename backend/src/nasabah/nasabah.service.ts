@@ -289,6 +289,44 @@ export class NasabahService {
     }
   }
 
+  // Koreksi saldo manual (mis. salah input saat migrasi/import data) - beda
+  // dari transaksi setor/tarik biasa karena tidak membuat baris Transaksi,
+  // jadi dicatat sebagai notifikasi broadcast supaya tetap ada jejak siapa
+  // yang mengubah, kapan, dan alasannya.
+  async koreksiSaldo(
+    id: string,
+    saldoBaru: number,
+    alasan: string,
+    staffNama: string,
+  ): Promise<SafeNasabah> {
+    try {
+      const existing = await this.findById(id);
+      const saldoLama = Number(existing.saldo);
+      const nasabah = await this.prisma.nasabah.update({
+        where: { id },
+        data: { saldo: saldoBaru },
+      });
+      const formatRp = (value: number) =>
+        new Intl.NumberFormat('id-ID', {
+          style: 'currency',
+          currency: 'IDR',
+          minimumFractionDigits: 0,
+        }).format(value);
+      this.notificationsService
+        .create({
+          recipientType: 'staff_broadcast',
+          type: 'saldo_dikoreksi',
+          title: 'Koreksi saldo nasabah',
+          description: `${staffNama} mengubah saldo ${nasabah.nama} dari ${formatRp(saldoLama)} menjadi ${formatRp(saldoBaru)}. Alasan: ${alasan}`,
+        })
+        .catch(() => {});
+      return this.excludePassword(nasabah);
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException('Gagal mengoreksi saldo');
+    }
+  }
+
   async changePassword(
     id: string,
     currentPassword: string,

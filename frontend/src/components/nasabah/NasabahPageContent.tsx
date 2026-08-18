@@ -399,6 +399,9 @@ export function NasabahPageContent() {
   const [addForm, setAddForm] = useState<AddForm>(initialAddForm);
   const [addSaving, setAddSaving] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [koreksiTarget, setKoreksiTarget] = useState<Nasabah | null>(null);
+  const [koreksiForm, setKoreksiForm] = useState({ saldo: "", alasan: "" });
+  const [koreksiSaving, setKoreksiSaving] = useState(false);
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -988,6 +991,44 @@ export function NasabahPageContent() {
       notify.error(getErrorMessage(error, "Gagal mengubah status nasabah"));
     } finally {
       setTogglingId(null);
+    }
+  }
+
+  function openKoreksi(nasabah: Nasabah) {
+    setKoreksiTarget(nasabah);
+    setKoreksiForm({ saldo: String(Number(nasabah.saldo)), alasan: "" });
+  }
+
+  function closeKoreksi() {
+    setKoreksiTarget(null);
+    setKoreksiForm({ saldo: "", alasan: "" });
+  }
+
+  async function handleKoreksiSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!koreksiTarget) return;
+    const saldoBaru = Number(koreksiForm.saldo);
+    if (Number.isNaN(saldoBaru) || saldoBaru < 0) {
+      notify.error("Saldo baru tidak valid");
+      return;
+    }
+    if (!koreksiForm.alasan.trim()) {
+      notify.error("Alasan koreksi wajib diisi");
+      return;
+    }
+    setKoreksiSaving(true);
+    try {
+      await api.patch(`/nasabah/${koreksiTarget.id}/saldo`, {
+        saldo: saldoBaru,
+        alasan: koreksiForm.alasan.trim(),
+      });
+      notify.success(`Saldo ${koreksiTarget.nama} berhasil diperbarui`);
+      closeKoreksi();
+      loadNasabah();
+    } catch (error) {
+      notify.error(getErrorMessage(error, "Gagal mengoreksi saldo"));
+    } finally {
+      setKoreksiSaving(false);
     }
   }
 
@@ -1755,6 +1796,15 @@ export function NasabahPageContent() {
                           <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.92 }}
+                            onClick={() => openKoreksi(nasabah)}
+                            className="flex items-center gap-1 rounded-lg bg-info px-2.5 py-1.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-info/90"
+                          >
+                            <Wallet size={12} />
+                            Koreksi Saldo
+                          </motion.button>
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.92 }}
                             onClick={() => handleToggleStatus(nasabah)}
                             disabled={togglingId === nasabah.id}
                             className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold text-white shadow-sm transition-colors disabled:opacity-50 ${
@@ -2099,6 +2149,132 @@ export function NasabahPageContent() {
                   >
                     {saving && <Loader2 size={14} className="animate-spin" />}
                     {saving ? "Menyimpan..." : "Simpan"}
+                  </motion.button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {koreksiTarget && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={closeKoreksi}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-md overflow-hidden rounded-3xl bg-background-card p-6 shadow-soft"
+            >
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-info/15 text-info">
+                    <Wallet size={20} />
+                  </span>
+                  <div>
+                    <h2 className="text-lg font-bold text-text-primary">
+                      Koreksi Saldo
+                    </h2>
+                    <p className="truncate text-xs text-text-secondary">
+                      {koreksiTarget.nama}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeKoreksi}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-background-hover hover:text-text-primary"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <p className="mb-4 flex items-start gap-1.5 rounded-xl bg-warning/10 px-3 py-2.5 text-xs text-warning">
+                <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                Koreksi ini langsung mengubah saldo tanpa membuat transaksi
+                setor/tarik. Gunakan hanya untuk memperbaiki kesalahan data,
+                bukan transaksi nasabah yang sebenarnya.
+              </p>
+
+              <form onSubmit={handleKoreksiSubmit} className="flex flex-col gap-4">
+                <div className="rounded-xl border border-border bg-background-hover px-3 py-2.5">
+                  <p className="text-xs text-text-secondary">Saldo saat ini</p>
+                  <p className="text-sm font-bold text-text-primary">
+                    {formatCurrency(koreksiTarget.saldo)}
+                  </p>
+                </div>
+
+                <div>
+                  <FieldLabel icon={Wallet}>Saldo Baru</FieldLabel>
+                  <input
+                    type="number"
+                    required
+                    min={0}
+                    step="0.01"
+                    value={koreksiForm.saldo}
+                    onChange={(e) =>
+                      setKoreksiForm({ ...koreksiForm, saldo: e.target.value })
+                    }
+                    className={inputClass}
+                  />
+                  {koreksiForm.saldo !== "" &&
+                    !Number.isNaN(Number(koreksiForm.saldo)) && (
+                      <p
+                        className={`mt-1.5 text-xs font-semibold ${
+                          Number(koreksiForm.saldo) - Number(koreksiTarget.saldo) >= 0
+                            ? "text-success"
+                            : "text-danger"
+                        }`}
+                      >
+                        {Number(koreksiForm.saldo) - Number(koreksiTarget.saldo) >= 0
+                          ? "+"
+                          : ""}
+                        {formatCurrency(
+                          Number(koreksiForm.saldo) - Number(koreksiTarget.saldo),
+                        )}
+                      </p>
+                    )}
+                </div>
+
+                <div>
+                  <FieldLabel icon={AlertTriangle}>Alasan Koreksi</FieldLabel>
+                  <textarea
+                    required
+                    rows={3}
+                    value={koreksiForm.alasan}
+                    onChange={(e) =>
+                      setKoreksiForm({ ...koreksiForm, alasan: e.target.value })
+                    }
+                    placeholder="Contoh: perbaikan salah input saat migrasi data"
+                    className={inputClass}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={closeKoreksi}
+                    className="rounded-xl px-4 py-2.5 text-sm font-semibold text-text-secondary transition-colors hover:bg-background-hover"
+                  >
+                    Batal
+                  </button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    type="submit"
+                    disabled={koreksiSaving}
+                    className="flex items-center gap-1.5 rounded-xl bg-info px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-info/90 disabled:opacity-50"
+                  >
+                    {koreksiSaving && <Loader2 size={14} className="animate-spin" />}
+                    {koreksiSaving ? "Menyimpan..." : "Simpan"}
                   </motion.button>
                 </div>
               </form>

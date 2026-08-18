@@ -16,15 +16,19 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Moon,
+  PencilLine,
   Search,
   ShieldCheck,
   Sparkles,
+  Sun,
   UserCircle2,
   Users,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import { syncThemeFromDom, useThemeStore } from "@/store/themeStore";
 import { useLiveClock } from "@/hooks/useLiveClock";
 import { isAdminRole, isNasabahRole } from "@/lib/role";
 import { formatFullDateID, formatRelativeTimeID, formatTime, getWibHour } from "@/lib/format";
@@ -40,6 +44,7 @@ const NOTIF_ICON: Record<string, LucideIcon> = {
   pengeluaran_baru: CreditCard,
   piutang_baru: Wallet,
   simpanan_hari_raya_pencairan: Sparkles,
+  saldo_dikoreksi: PencilLine,
 };
 const NOTIF_COLOR: Record<string, string> = {
   transaksi_setor: "#22c55e",
@@ -48,6 +53,7 @@ const NOTIF_COLOR: Record<string, string> = {
   pengeluaran_baru: "#dc2626",
   piutang_baru: "#8b5cf6",
   simpanan_hari_raya_pencairan: "#f59e0b",
+  saldo_dikoreksi: "#f59e0b",
 };
 const NOTIF_ICON_DEFAULT = Bell;
 const NOTIF_COLOR_DEFAULT = "#1120f0";
@@ -104,6 +110,12 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const containerRef = useRef<HTMLElement>(null);
+  const theme = useThemeStore((state) => state.theme);
+  const toggleTheme = useThemeStore((state) => state.toggleTheme);
+
+  useEffect(() => {
+    syncThemeFromDom();
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -323,6 +335,26 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
       </div>
 
       <div className="ml-auto flex items-center gap-3">
+        <button
+          type="button"
+          onClick={toggleTheme}
+          aria-label={theme === "dark" ? "Aktifkan tema terang" : "Aktifkan tema gelap"}
+          title={theme === "dark" ? "Tema terang" : "Tema gelap"}
+          className="relative flex h-11 w-20 shrink-0 items-center rounded-full bg-background-hover px-1 shadow-inner ring-1 ring-border transition-colors"
+        >
+          <Sun size={13} className="pointer-events-none absolute left-2 text-text-muted" />
+          <Moon size={13} className="pointer-events-none absolute right-2 text-text-muted" />
+          <motion.span
+            layout
+            transition={{ type: "spring", stiffness: 500, damping: 32 }}
+            className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-full bg-background-card text-text-primary shadow-sm ${
+              theme === "dark" ? "ml-auto" : "mr-auto"
+            }`}
+          >
+            {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
+          </motion.span>
+        </button>
+
         <div className="relative">
           <button
             type="button"

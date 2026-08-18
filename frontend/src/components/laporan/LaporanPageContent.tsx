@@ -719,15 +719,22 @@ export function LaporanPageContent() {
             </div>
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={barData} barGap={4}>
-                <CartesianGrid vertical={false} stroke="#e5e7eb" />
+                <CartesianGrid vertical={false} stroke="var(--color-border)" />
                 <XAxis
                   dataKey="month"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: "#9ca3af", fontSize: 12 }}
+                  tick={{ fill: "var(--color-text-muted)", fontSize: 12 }}
                 />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: "#9ca3af", fontSize: 12 }} />
-                <Tooltip content={<BarTooltip />} cursor={{ fill: "#1120f0", fillOpacity: 0.06 }} />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "var(--color-text-muted)", fontSize: 12 }}
+                />
+                <Tooltip
+                  content={<BarTooltip />}
+                  cursor={{ fill: "var(--color-primary)", fillOpacity: 0.06 }}
+                />
                 <Bar dataKey="setor" fill="#22c55e" radius={[6, 6, 0, 0]} />
                 <Bar dataKey="tarik" fill="#ea580c" radius={[6, 6, 0, 0]} />
               </BarChart>

@@ -148,8 +148,7 @@ export interface TransaksiStats {
 export interface KasUtamaResult {
   total: number;
   breakdown: {
-    totalSetor: number;
-    totalTarik: number;
+    totalSaldoNasabah: number;
     totalSimpanan: number;
     totalPencairanHariRaya: number;
     totalPiutangDicairkan: number;

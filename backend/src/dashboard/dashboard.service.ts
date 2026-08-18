@@ -2,8 +2,7 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface KasUtamaBreakdown {
-  totalSetor: number;
-  totalTarik: number;
+  totalSaldoNasabah: number;
   totalSimpanan: number;
   totalPencairanHariRaya: number;
   totalPiutangDicairkan: number;
@@ -23,7 +22,7 @@ export class DashboardService {
   async getKasUtama(): Promise<KasUtamaResult> {
     try {
       const [
-        transaksiByJenis,
+        totalSaldoNasabahAgg,
         simpananPokok,
         simpananWajib,
         simpananHariRaya,
@@ -32,11 +31,7 @@ export class DashboardService {
         piutangAngsuran,
         pengeluaran,
       ] = await this.prisma.$transaction([
-        this.prisma.transaksi.groupBy({
-          by: ['jenisTransaksi'],
-          orderBy: { jenisTransaksi: 'asc' },
-          _sum: { jumlah: true },
-        }),
+        this.prisma.nasabah.aggregate({ _sum: { saldo: true } }),
         this.prisma.simpananPokok.aggregate({ _sum: { nominal: true } }),
         this.prisma.simpananWajib.aggregate({ _sum: { nominal: true } }),
         this.prisma.simpananHariRaya.aggregate({ _sum: { nominal: true } }),
@@ -48,14 +43,7 @@ export class DashboardService {
         this.prisma.pengeluaran.aggregate({ _sum: { jumlah: true } }),
       ]);
 
-      const totalSetor = Number(
-        transaksiByJenis.find((t) => t.jenisTransaksi === 'setor')?._sum
-          ?.jumlah ?? 0,
-      );
-      const totalTarik = Number(
-        transaksiByJenis.find((t) => t.jenisTransaksi === 'tarik')?._sum
-          ?.jumlah ?? 0,
-      );
+      const totalSaldoNasabah = Number(totalSaldoNasabahAgg._sum.saldo ?? 0);
       const totalSimpanan =
         Number(simpananPokok._sum.nominal ?? 0) +
         Number(simpananWajib._sum.nominal ?? 0) +
@@ -70,8 +58,7 @@ export class DashboardService {
       const totalPengeluaran = Number(pengeluaran._sum.jumlah ?? 0);
 
       const total =
-        totalSetor -
-        totalTarik +
+        totalSaldoNasabah +
         (totalSimpanan - totalPencairanHariRaya) -
         (totalPiutangDicairkan - totalAngsuranMasuk) -
         totalPengeluaran;
@@ -79,8 +66,7 @@ export class DashboardService {
       return {
         total,
         breakdown: {
-          totalSetor,
-          totalTarik,
+          totalSaldoNasabah,
           totalSimpanan,
           totalPencairanHariRaya,
           totalPiutangDicairkan,
